@@ -18,14 +18,17 @@ let clock: MockClock
 
 // Stands in for the engine beneath the plugin: answers its calls and records what it asked for.
 function engine(on: On, start: { percent: number }, compact: () => SessionCompactResult = () => ({ messages: MSGS })) {
-  const seen = { submitted: [] as string[], contexts: [] as (readonly string[])[], commands: [] as { command: string; args: string }[], filled: [] as string[], toasts: [] as string[] }
+  const seen = { submitted: [] as string[], contexts: [] as (readonly string[])[], commands: [] as { command: string; args: string }[], filled: [] as string[], toasts: [] as string[], statuses: [] as (string | undefined)[] }
   clock = mock.clock(on)
   mock.store(on)
   on('session.usage', () => ({ value: usage(start.percent) }))
   on('session.root', () => ({ value: 'C:/proj' }))
   on('command.register', () => ({ value: { command: 'handoff' } }))
   on('tool.register', () => ({ value: { tool: TOOL_NAME } }))
-  on('ui.status', () => ({ value: undefined }))
+  on('ui.status', ($, e) => {
+    seen.statuses.push(e.text)
+    return { value: undefined }
+  })
   on('ui.toast', ($, e) => {
     seen.toasts.push(e.text)
     return { value: undefined }
@@ -222,6 +225,17 @@ test('a threshold that cannot be saved still holds for the session', async ($, o
   )
   await turn($)
   expect(seen.submitted).toHaveLength(1)
+})
+
+test('it is on from the start of a session and says so in the status line', async ($, on) => {
+  const seen = engine(on, { percent: 10 })
+  on('config.set', ($, e) => ({ value: e.value }))
+  await start($)
+  expect(seen.statuses.at(-1)).toBe('Handoff at 50%')
+  await handoff($, 'off')
+  expect(seen.statuses.at(-1)).toBe('Handoff off')
+  await handoff($, '65')
+  expect(seen.statuses.at(-1)).toBe('Handoff at 65%')
 })
 
 for (const draft of ['', 'half a thought']) {

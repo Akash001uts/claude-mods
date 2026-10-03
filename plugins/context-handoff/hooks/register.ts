@@ -13,8 +13,7 @@ const phase = atom({ plugin: 'context-handoff', key: 'phase' } as const, 'idle')
 const hasFired = atom({ plugin: 'context-handoff', key: 'hasFired' } as const, false)
 const pending = atom({ plugin: 'context-handoff', key: 'pending' } as const, null)
 
-const STATUS: Record<Phase, string | undefined> = {
-  idle: undefined,
+const STATUS: Record<Exclude<Phase, 'idle'>, string> = {
   wrapping: 'Handoff: updating docs…',
   ready: 'Handoff: compacting when this turn ends',
   compacting: 'Handoff: compacting…',
@@ -39,9 +38,18 @@ const guide = () => [
   `- This project's handoff file is \`${cfg.handoffPath}\` (relative to the project root).`,
 ].join('\n')
 
+// Always on show, like the context bar: armed at its threshold, off, or which step a handoff is on.
+async function showStatus($: EngineInterface) {
+  const now = await read($, phase)
+  if (now !== 'idle') return $.ui.status(STATUS[now])
+  if (!isInteractive) return
+  const isArmed = cfg.mode !== 'off' && (await read($, isAuto))
+  await $.ui.status(isArmed ? `Handoff at ${cfg.threshold}%${cfg.mode === 'ask' ? ' (ask)' : ''}` : 'Handoff off')
+}
+
 async function setPhase($: EngineInterface, next: Phase) {
   await update($, phase, () => next)
-  await $.ui.status(STATUS[next])
+  await showStatus($)
 }
 
 async function reading($: EngineInterface) {
@@ -110,6 +118,7 @@ async function setThreshold($: EngineInterface, percent: number) {
   const off = cfg.mode === 'off' ? ' Mode is off in /config, so set it to auto or ask for this to take effect.' : ''
   const now = (await reading($)).percent
   const soon = now !== undefined && now >= percent ? ` The window is already at ${now}%, so it starts after your next turn.` : ''
+  await showStatus($)
   return `Auto handoff at ${percent}%. ${where}${off}${soon}`
 }
 
@@ -120,6 +129,8 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     isInteractive = e.isInteractive
+    // On from the first prompt, like the context bar, and says so in the status line.
+    await showStatus($)
     await $.command.register({
       name: 'handoff',
       description: 'Hand off now; /handoff 60 sets when the auto handoff kicks in; also on | off | status | resume',
@@ -269,6 +280,7 @@ export const register: Register = (on, options) => {
     const arg = e.args.trim().toLowerCase() || 'now'
     if (arg === 'on' || arg === 'off') {
       await update($, isAuto, () => arg === 'on')
+      await showStatus($)
       return { text: arg === 'on' ? `Auto handoff on at ${cfg.threshold}%.` : 'Auto handoff off for this session.' }
     }
     if (arg === 'status') {

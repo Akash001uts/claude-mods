@@ -66,6 +66,8 @@ the kickoff prompt will be waiting in the prompt box next time you open a sessio
 
 Commands and settings:
 
+- It's on from the start of every session, like the bar. The status line shows `Handoff at 50%` so you know it's armed,
+  and it changes to show what step it's on while a handoff is running.
 - `/handoff` starts a handoff straight away, whatever the context level.
 - `/handoff 60` (or `/handoff at 60%`) changes when the automatic handoff starts. Anything from 5% to 95% works, and it
   saves to the plugin's settings so it sticks between sessions.
