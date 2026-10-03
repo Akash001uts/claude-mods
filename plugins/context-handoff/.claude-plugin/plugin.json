@@ -1,0 +1,30 @@
+{
+  "name": "context-handoff",
+  "version": "0.1.0",
+  "description": "Hands a long session off cleanly: at a context threshold Claude updates the docs and writes a handoff, the session compacts with its instructions, then a kickoff prompt carries on. Gives Claude a live context reading and a /wrap-up skill",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "threshold": {
+      "type": "number",
+      "title": "Handoff threshold (%)",
+      "description": "How full the context window gets before the handoff starts",
+      "default": 50
+    },
+    "mode": {
+      "type": "string",
+      "title": "Handoff mode",
+      "description": "auto runs the handoff itself; ask puts the handoff prompt in the prompt box for you to send; off only shows Claude the reading",
+      "options": ["auto", "ask", "off"],
+      "default": "auto"
+    },
+    "handoffPath": {
+      "type": "string",
+      "title": "Handoff file",
+      "description": "Where the wrap-up skill writes the handoff, relative to the project root",
+      "default": ".claude/handoff.md"
+    }
+  }
+}
