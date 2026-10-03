@@ -116,6 +116,7 @@ test('the tool call compacts with its instructions, then the kickoff prompt carr
   await turn($)
   expect(seen.commands).toEqual([{ command: 'compact', args: 'Keep the plan and file paths.' }])
 
+  // What /compact does next in a session: the compaction, with the plugin's session.compact hook in its chain.
   await $.session.compact({ trigger: 'manual', instructions: 'Keep the plan and file paths.', messages: MSGS })
   await clock.settle()
   expect(seen.submitted.at(-1)).toBe('Read .claude/handoff.md and carry on with step 2.')
@@ -127,6 +128,7 @@ test('a skipped compaction sends no kickoff', async ($, on) => {
   await turn($)
   await callTool($, { mode: 'continue', handoffPath: 'h.md', compactInstructions: 'x', kickoffPrompt: 'carry on' })
   await turn($)
+  expect(seen.commands.map(c => c.command)).toEqual(['compact'])
   await $.session.compact({ trigger: 'manual', messages: MSGS })
   await clock.settle()
   expect(seen.submitted).not.toContain('carry on')
@@ -176,6 +178,50 @@ test('/handoff off stops the automatic handoff for the session', async ($, on) =
   await start($)
   await turn($)
   expect(seen.submitted).toHaveLength(0)
+})
+
+const handoff = ($: Engine, args: string) =>
+  $.command.run({ command: 'handoff', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+
+test('/handoff on its own starts a handoff straight away, at any level', async ($, on) => {
+  const seen = engine(on, { percent: 12 })
+  await start($)
+  expect((await handoff($, '')).text).toBe('Handoff started.')
+  await clock.settle()
+  expect(seen.submitted).toHaveLength(1)
+  expect((await handoff($, 'now')).text).toBe('A handoff is already running.')
+})
+
+test('/handoff 60 saves when the auto handoff kicks in', async ($, on) => {
+  const level = { percent: 55 }
+  const seen = engine(on, level)
+  const saved: unknown[] = []
+  on('config.set', ($, e) => {
+    saved.push([e.key, e.value])
+    return { value: e.value }
+  })
+  await start($)
+  expect((await handoff($, '60')).text).toBe('Auto handoff at 60%. Saved for future sessions too.')
+  expect(saved).toEqual([['context-handoff.threshold', 60]])
+  expect((await handoff($, 'at 2%')).text).toBe('Pick a threshold between 5% and 95%.')
+
+  await turn($)
+  expect(seen.submitted).toHaveLength(0)
+  level.percent = 61
+  await turn($)
+  expect(seen.submitted).toHaveLength(1)
+  expect((await handoff($, 'status')).text).toContain('auto at 60%')
+})
+
+test('a threshold that cannot be saved still holds for the session', async ($, on) => {
+  const seen = engine(on, { percent: 30 })
+  on('config.set', () => ({ deny: 'managed by policy' }))
+  await start($)
+  expect((await handoff($, '25%')).text).toBe(
+    "Auto handoff at 25%. For this session only (couldn't save the setting: managed by policy). The window is already at 30%, so it starts after your next turn.",
+  )
+  await turn($)
+  expect(seen.submitted).toHaveLength(1)
 })
 
 for (const draft of ['', 'half a thought']) {

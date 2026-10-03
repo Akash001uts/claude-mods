@@ -49,8 +49,11 @@ It also gives Claude visibility into context usage: every prompt carries a hidde
 reaches its natural end and the window is filling. Run `/context-handoff:wrap-up` yourself at the end of a session and
 the kickoff prompt is put in the prompt box the next time you open a session in that project.
 
-- `/handoff` starts a handoff now; `/handoff off` and `/handoff on` pause or resume the automatic one for the session;
-  `/handoff status` shows the reading and settings; `/handoff resume` puts a saved kickoff prompt back in the box.
+- `/handoff` starts a handoff straight away, whatever the context level.
+- `/handoff 60` (or `/handoff at 60%`) sets when the automatic handoff kicks in, from 5% to 95%. It's saved as the
+  plugin's `threshold` setting, so it carries over to future sessions.
+- `/handoff off` and `/handoff on` pause or resume the automatic one for the session; `/handoff status` shows the
+  reading and settings; `/handoff resume` puts a saved kickoff prompt back in the box.
 - Settings (`/config`): `threshold` (default 50), `mode` (`auto` runs it, `ask` puts the handoff prompt in the box for
   you to send, `off` only shows Claude the reading), `handoffPath`.
 - Only the main conversation hands off, and only after a turn finishes normally. An interrupted turn cancels the

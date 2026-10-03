@@ -74,7 +74,10 @@ async function startHandoff($: EngineInterface, how: 'auto' | 'ask') {
     return
   }
   await setPhase($, 'wrapping')
-  void $.prompt.submit({ text })
+  // From a timer: a submit from inside a command.run hook would wait on the turn that hook holds.
+  $.clock.after(0, () => {
+    void $.prompt.submit({ text }).catch(() => cancel($, "Handoff couldn't start: run /handoff to try again"))
+  })
 }
 
 async function cancel($: EngineInterface, why: string) {
@@ -95,6 +98,21 @@ async function fillSaved($: EngineInterface) {
   return true
 }
 
+// Saved as the plugin's threshold setting, as /config would; the change reloads the module with it.
+// Where the setting can't be written, it holds for this session only.
+async function setThreshold($: EngineInterface, percent: number) {
+  if (percent < 5 || percent > 95) return 'Pick a threshold between 5% and 95%.'
+  cfg.threshold = percent
+  await update($, isAuto, () => true)
+  await update($, hasFired, () => false)
+  const saved = await $.config.set({ key: 'context-handoff.threshold', value: percent }).catch((err: unknown) => ({ deny: String(err) }))
+  const where = saved.deny === undefined ? 'Saved for future sessions too.' : `For this session only (couldn't save the setting: ${saved.deny}).`
+  const off = cfg.mode === 'off' ? ' Mode is off in /config, so set it to auto or ask for this to take effect.' : ''
+  const now = (await reading($)).percent
+  const soon = now !== undefined && now >= percent ? ` The window is already at ${now}%, so it starts after your next turn.` : ''
+  return `Auto handoff at ${percent}%. ${where}${off}${soon}`
+}
+
 export const register: Register = (on, options) => {
   cfg.threshold = Number(options.threshold ?? 50)
   cfg.mode = String(options.mode ?? 'auto') as typeof cfg.mode
@@ -104,8 +122,8 @@ export const register: Register = (on, options) => {
     isInteractive = e.isInteractive
     await $.command.register({
       name: 'handoff',
-      description: 'Hand off now (compact and carry on), or: on | off | status | resume',
-      argumentHint: '[now|on|off|status|resume]',
+      description: 'Hand off now; /handoff 60 sets when the auto handoff kicks in; also on | off | status | resume',
+      argumentHint: '[now | <percent> | on | off | status | resume]',
     })
     await $.tool.register({
       name: TOOL,
@@ -233,7 +251,10 @@ export const register: Register = (on, options) => {
     if (now === 'compacting' && p) {
       await update($, pending, () => null)
       await setPhase($, 'idle')
-      void $.prompt.submit({ text: p.kickoff })
+      // From a timer: this compaction runs under /compact's command.run, which a submit here would wait on.
+      $.clock.after(0, () => {
+        void $.prompt.submit({ text: p.kickoff }).catch(() => $.ui.toast('Handoff: compacted, but the kickoff prompt failed. Paste it from the handoff file'))
+      })
     }
     return r
   })
@@ -256,7 +277,9 @@ export const register: Register = (on, options) => {
       return { text: `Context ${percent ?? '?'}% of ${short(window)}. Handoff: ${auto}. Now: ${await read($, phase)}. File: ${cfg.handoffPath}` }
     }
     if (arg === 'resume') return { text: (await fillSaved($)) ? 'Kickoff prompt is in the prompt box.' : 'No saved kickoff prompt for this project.' }
-    if (arg !== 'now') return { text: 'Usage: /handoff [now|on|off|status|resume]' }
+    const at = /^(?:at\s+)?(\d{1,3})\s*%?$/.exec(arg)
+    if (at) return { text: await setThreshold($, Number(at[1])) }
+    if (arg !== 'now') return { text: 'Usage: /handoff [now | <percent> | on | off | status | resume], e.g. /handoff 60' }
     if ((await read($, phase)) !== 'idle') return { text: 'A handoff is already running.' }
     await update($, hasFired, () => true)
     await startHandoff($, 'auto')

@@ -10,7 +10,7 @@
     "threshold": {
       "type": "number",
       "title": "Handoff threshold (%)",
-      "description": "How full the context window gets before the handoff starts",
+      "description": "How full the context window gets (%) before the handoff starts; /handoff 60 sets it too",
       "default": 50
     },
     "mode": {
