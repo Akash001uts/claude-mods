@@ -35,15 +35,29 @@ the kickoff prompt will be waiting in the prompt box next time you open a sessio
 
 ## What it runs and stores
 
-- It reads the session's context usage from Claude Code. It doesn't send anything anywhere.
-- It submits prompts for you: the wrap-up prompt, `/compact` with Claude's instructions, and the kickoff prompt. In
-  `ask` mode it only fills the prompt box and you decide whether to send.
+- It reads the session's context usage from Claude Code (percentage used, tokens used, window size). It doesn't send
+  anything outside Claude Code.
+- **Prompts it submits.** When a handoff starts, it submits the wrap-up prompt. That prompt contains the current context
+  percentage and window size, the handoff file path, and the steps above, nothing else. After compaction it submits
+  the kickoff prompt Claude wrote. In `ask` mode it only fills the prompt box and you decide whether to send. At the
+  start of a session it can also put a saved kickoff prompt in the prompt box (it doesn't send it).
+- **What it changes in prompts.** Each prompt you send gets one extra hidden line with the context reading, like
+  `[context-handoff] Context window: 34% used (68.0k of 200.0k); handoff at 50%.` Your own text isn't changed.
+- **What it adds to the system prompt.** A short guide telling Claude what that line means, to suggest wrapping up once
+  at the natural end of a task, and where the handoff file goes.
+- **Commands it runs.** Only `/compact`, once per handoff, after Claude has called `handoff_ready` and the turn has
+  finished. It passes Claude's compaction instructions as the argument.
+- **Its own tool.** It adds one tool, `handoff_ready`, which Claude calls at the end of a wrap-up. The mod answers that
+  call itself: it saves the kickoff prompt and compaction instructions (or, at the end of a session, saves the kickoff
+  prompt for next time) and replies to Claude. It doesn't touch any other tool. Your normal permission rules apply to
+  it, so you may get a prompt the first time; add `mcp__context-handoff__handoff_ready` to your allow rules if you
+  don't want to be asked.
+- **Settings it changes.** `/handoff 60` saves the threshold as this plugin's `threshold` setting (the same one in
+  `/config`). It doesn't set anything else or touch environment variables.
 - Claude (not the mod) edits your project's existing docs and writes the handoff file during a wrap-up, using its
   normal tools, so your usual permission prompts still apply.
-- It adds a short guide to Claude's system prompt and a hidden context reading to each prompt.
-- It registers one tool, `handoff_ready`, that Claude calls when the wrap-up is done.
 - The kickoff prompt is saved in Claude Code's plugin storage, keyed to the project, so it can be offered next session.
-  It's deleted once it's used. `/handoff 60` saves the threshold to the plugin's settings.
+  It's deleted once it's used.
 
 ## Licence
 

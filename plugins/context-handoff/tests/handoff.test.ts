@@ -149,11 +149,11 @@ test("the engine's own autocompact sends no kickoff", async ($, on) => {
   expect(seen.submitted).not.toContain('carry on')
 })
 
-test("the plugin's own tool is allowed without a prompt", async ($, on) => {
+test("the person's permission rules decide on the plugin's own tool", async ($, on) => {
   engine(on, { percent: 10 })
   on('tool.check', () => ({ decision: 'ask' }))
   await start($)
-  expect((await $.tool.check({ tool: TOOL_NAME, input: {} })).decision).toBe('allow')
+  expect((await $.tool.check({ tool: TOOL_NAME, input: {} })).decision).toBe('ask')
 })
 
 test('an end-of-session handoff fills the next session prompt box', async ($, on) => {

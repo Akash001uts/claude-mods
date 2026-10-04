@@ -1,6 +1,6 @@
 {
   "name": "context-handoff",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hands a long session off cleanly: at a context threshold Claude updates the docs and writes a handoff, the session compacts with its instructions, then a kickoff prompt carries on. Gives Claude a live context reading and a /wrap-up skill",
   "author": {
     "name": "Akash Bhatnagar"
@@ -18,7 +18,6 @@
       "type": "string",
       "title": "Handoff mode",
       "description": "auto runs the handoff itself; ask puts the handoff prompt in the prompt box for you to send; off only shows Claude the reading",
-      "options": ["auto", "ask", "off"],
       "default": "auto"
     },
     "handoffPath": {

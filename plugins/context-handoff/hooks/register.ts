@@ -124,7 +124,9 @@ async function setThreshold($: EngineInterface, percent: number) {
 
 export const register: Register = (on, options) => {
   cfg.threshold = Number(options.threshold ?? 50)
-  cfg.mode = String(options.mode ?? 'auto') as typeof cfg.mode
+  // The setting is free text, so anything but ask or off means auto.
+  const mode = String(options.mode ?? 'auto').trim().toLowerCase()
+  cfg.mode = mode === 'ask' || mode === 'off' ? mode : 'auto'
   cfg.handoffPath = String(options.handoffPath ?? '.claude/handoff.md')
 
   on('session.start', async ($, e, next) => {
@@ -177,8 +179,7 @@ export const register: Register = (on, options) => {
     return { ...composed, sections: [...composed.sections, { id: `${PLUGIN}:guide`, text: guide(), scope: 'session' as const }] }
   })
 
-  // The plugin's own tool runs without a permission prompt and is always in the model's list.
-  on('tool.check', { tool: 'mcp__context-handoff__handoff_ready' }, () => ({ decision: 'allow' as const, reason: 'context-handoff saves its own handoff' }))
+  // The plugin's own tool is always in the model's list; whether it prompts is up to the person's permission rules.
   on('tool.describe', { tool: 'mcp__context-handoff__handoff_ready' }, async ($, e, next) => ({ ...(await next(e)), isDeferred: false }))
 
   // A regex: the typed matcher only names tools that were connected when the types were last laid.
