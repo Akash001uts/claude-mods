@@ -5,5 +5,6 @@
   "author": {
     "name": "Akash Bhatnagar"
   },
+  "license": "MIT",
   "types": "./types/index.d.ts"
 }
