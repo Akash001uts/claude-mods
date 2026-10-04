@@ -1,6 +1,6 @@
 {
   "name": "context-bar",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Stacked bar of the context window above the prompt, coloured by /context category, with rate limits, room before compaction and session length; /context-bar details for a full token breakdown",
   "author": {
     "name": "Akash Bhatnagar"

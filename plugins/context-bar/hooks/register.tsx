@@ -23,9 +23,9 @@ export const short = (n: number) =>
 export const span = (ms: number) => {
   const m = Math.max(0, Math.floor(ms / 60_000))
   if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ${m % 60}m`
-  return `${Math.floor(h / 24)}d ${h % 24}h`
+  const hours = Math.floor(m / 60)
+  if (hours < 24) return `${hours}h ${m % 60}m`
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`
 }
 
 // The band's third line: rate limits, room before compaction, session length.
