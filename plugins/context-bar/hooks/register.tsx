@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, ResolveInput, SessionRateLimit } from 'claude-code'
+import type { ConfigSetResult, EngineInterface, Register, ResolveInput, SessionRateLimit } from 'claude-code'
 
 import type { Details, Limit, Row, Segment, Snapshot } from '../types'
 
@@ -205,10 +205,9 @@ async function shown($: EngineInterface) {
   return snap && snap.segments.length > 0 ? snap : null
 }
 
-async function setPosition($: EngineInterface, value: 'above' | 'below') {
-  const saved = await $.config.set({ key: 'context-bar.position', value }).catch((err: unknown) => ({ deny: String(err) }))
-  return 'deny' in saved && saved.deny ? `Couldn't move the bar: ${saved.deny}` : `Context bar moved ${value} the prompt.`
-}
+const moved = (saved: ConfigSetResult, where: string) =>
+  saved.deny ? `Couldn't move the bar: ${saved.deny}` : `Context bar moved ${where} the prompt.`
+const failed = (err: unknown): ConfigSetResult => ({ deny: String(err) })
 
 // Shown once after install, and again when INTRO_VERSION goes up for a feature worth telling people about.
 const INTRO_VERSION = '0.3'
@@ -258,7 +257,9 @@ export const register: Register = (on, options) => {
       showIntro($)
       return { text: 'Context bar help shown above.' }
     }
-    if (arg === 'above' || arg === 'below') return { text: await setPosition($, arg) }
+    // Each settings call is written out in full, so the plugin directory can read what it sets.
+    if (arg === 'below') return { text: moved(await $.config.set({ key: 'context-bar.position', value: 'below' }).catch(failed), 'below') }
+    if (arg === 'above') return { text: moved(await $.config.set({ key: 'context-bar.position', value: 'above' }).catch(failed), 'above') }
     const nextOn = !(await read($, isOn))
     await update($, isOn, () => nextOn)
     if (nextOn) await refresh($, true)
