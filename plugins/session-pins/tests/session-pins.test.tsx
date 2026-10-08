@@ -29,7 +29,7 @@ const start = ($: Engine) => $.session.start({ cwd: 'C:/proj', surface: 'termina
 const run = ($: Engine, command: string, args = '') =>
   $.command.run({ command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 const COMPOSE = { model: 'test', promptModel: 'test', surfaces: ['terminal' as const], tools: [], outputStyle: null, traits: [] }
-const pinsSection = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.find(s => s.id === 'pin:pins')?.text
+const pinsSection = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.find(s => s.id === 'session-pins:pins')?.text
 
 test('/pin shows the note above the prompt and gives it to Claude', async ($, on) => {
   engine(on)
@@ -38,7 +38,7 @@ test('/pin shows the note above the prompt and gives it to Claude', async ($, on
 
   expect((await run($, 'pin', 'Use Australian spelling')).text).toMatch(/Pinned \(#1\)/)
   for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ plugin: 'pin', surface, ...BAND })
+    const ui = await $.ui.mount({ plugin: 'session-pins', surface, ...BAND })
     expect(await ui.find({ type: 'Text', text: /Use Australian spelling/ })).toBeDefined()
     // Whatever else draws there still does.
     expect(await ui.find({ key: 'beneath' })).toBeDefined()
@@ -72,7 +72,7 @@ test('/unpin removes one or all, and the band and section go with them', async (
   // Started again (a reload or resume), nothing comes back.
   await start($)
   expect((await run($, 'pin', 'list')).text).toMatch(/Nothing pinned/)
-  const ui = await $.ui.mount({ plugin: 'pin', surface: 'terminal', ...BAND })
+  const ui = await $.ui.mount({ plugin: 'session-pins', surface: 'terminal', ...BAND })
   expect(await ui.find({ type: 'Text', text: /📌/ })).toBeUndefined()
   await ui.unmount()
 })
@@ -91,19 +91,19 @@ test('hide keeps Claude\'s copy; a long list folds into "+N more"', async ($, on
   await start($)
   for (const n of [1, 2, 3, 4, 5]) await run($, 'pin', `note ${n}`)
 
-  let ui = await $.ui.mount({ plugin: 'pin', surface: 'terminal', ...BAND })
+  let ui = await $.ui.mount({ plugin: 'session-pins', surface: 'terminal', ...BAND })
   expect(await ui.find({ type: 'Text', text: /note 2/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /note 3/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /\+3 more/ })).toBeDefined()
   await ui.unmount()
 
   // A short terminal: one row, the first pin and the count share it.
-  ui = await $.ui.mount({ plugin: 'pin', surface: 'terminal', ...BAND, props: { ...BAND.props, maxRows: 4 } })
+  ui = await $.ui.mount({ plugin: 'session-pins', surface: 'terminal', ...BAND, props: { ...BAND.props, maxRows: 4 } })
   expect(await ui.find({ type: 'Text', text: /\(\+4 more\) note 1/ })).toBeDefined()
   await ui.unmount()
 
   await run($, 'pin', 'hide')
-  ui = await $.ui.mount({ plugin: 'pin', surface: 'terminal', ...BAND })
+  ui = await $.ui.mount({ plugin: 'session-pins', surface: 'terminal', ...BAND })
   expect(await ui.find({ type: 'Text', text: /note/ })).toBeUndefined()
   await ui.unmount()
   expect(await pinsSection($)).toMatch(/5\. note 5/)
@@ -119,7 +119,7 @@ test('URLs in a pin draw as links', async ($, on) => {
   await start($)
   await run($, 'pin', 'Spec at https://example.com/spec?id=3')
   for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ plugin: 'pin', surface, ...BAND })
+    const ui = await $.ui.mount({ plugin: 'session-pins', surface, ...BAND })
     const link = await ui.find({ type: 'Link' })
     expect(link?.props.href).toBe('https://example.com/spec?id=3')
     await ui.unmount()
@@ -154,7 +154,7 @@ test('a long pin is cut to fit, keeping its links on screen', async ($, on) => {
   engine(on)
   await start($)
   await run($, 'pin', `Look at ${url} before you start on anything else in this repo today, it explains the layout`)
-  const ui = await $.ui.mount({ plugin: 'pin', surface: 'terminal', ...BAND, props: { ...BAND.props, bodyColumns: 60 } })
+  const ui = await $.ui.mount({ plugin: 'session-pins', surface: 'terminal', ...BAND, props: { ...BAND.props, bodyColumns: 60 } })
   // Cut off, so the row is a button that opens it out.
   expect(await ui.find({ key: 'more-1' })).toBeDefined()
   // The link is still a link, shortened to fit.
@@ -172,7 +172,7 @@ test('a cut-off pin opens out when pressed, and folds back', async ($, on) => {
   await run($, 'pin', long)
   await run($, 'pin', 'short one')
   for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ plugin: 'pin', surface, ...BAND, props: { ...BAND.props, bodyColumns: 60 } })
+    const ui = await $.ui.mount({ plugin: 'session-pins', surface, ...BAND, props: { ...BAND.props, bodyColumns: 60 } })
     // A pin that fits is no button.
     expect(await ui.find({ key: 'more-2' })).toBeUndefined()
 

@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Pin } from '../types'
 
-const PLUGIN = 'pin'
+const PLUGIN = 'session-pins'
 const MAX_PINS = 20
 const MAX_CHARS = 1000
 // Pins rows shown above the prompt before "+N more"; context-bar shares the band.
@@ -11,9 +11,9 @@ const MAX_ROWS = 3
 // Sessions kept in the store, so resume brings pins back without the store growing forever.
 const MAX_SESSIONS = 50
 
-const pins = atom({ plugin: 'pin', key: 'pins' } as const, [])
-const isHidden = atom({ plugin: 'pin', key: 'isHidden' } as const, false)
-const expanded = atom({ plugin: 'pin', key: 'expanded' } as const, null)
+const pins = atom({ plugin: 'session-pins', key: 'pins' } as const, [])
+const isHidden = atom({ plugin: 'session-pins', key: 'isHidden' } as const, false)
+const expanded = atom({ plugin: 'session-pins', key: 'expanded' } as const, null)
 
 type Saved = { pins: Pin[]; savedAt: number }
 const sessionKey = (id: string) => `session:${id}`

@@ -1,5 +1,5 @@
 {
-  "name": "pin",
+  "name": "session-pins",
   "version": "0.1.0",
   "description": "Pin notes to a session: /pin keeps them on show above the prompt and in Claude's system prompt, so they hold through compaction and come back on resume",
   "author": {

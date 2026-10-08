@@ -1,4 +1,4 @@
-# pin
+# session-pins
 
 Sometimes there's one thing I need Claude to remember for the whole session, like "use Australian spelling", "don't
 touch the tests folder" or the name of the branch I'm on. If I just say it once, it scrolls away, and after a compact

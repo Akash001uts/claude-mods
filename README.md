@@ -9,7 +9,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | --- | --- | --- |
 | [context-bar](plugins/context-bar) | Always-on bar showing how full the context window is, plus your rate limits | Published in Claude's plugin directory |
 | [context-handoff](plugins/context-handoff) | Hands a long session off cleanly before it compacts | In review for the directory |
-| [pin](plugins/pin) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
+| [session-pins](plugins/session-pins) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
 
 ## Install
 
@@ -17,7 +17,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin marketplace add Akash001uts/claude-mods
 /plugin install context-bar@akash-mods
 /plugin install context-handoff@akash-mods
-/plugin install pin@akash-mods
+/plugin install session-pins@akash-mods
 ```
 
 You can install just the ones you want. You need a recent Claude Code build that supports mods
@@ -27,7 +27,7 @@ To get new versions, run `/plugin marketplace update akash-mods`.
 
 ## context-bar
 
-A bar above the prompt that shows how full your context window is, split into the same categories `/context` uses
+A bar above (or below) the prompt that shows how full your context window is, split into the same categories `/context` uses
 (system prompt, tools, memory files, messages and so on).
 
 ![context-bar above the prompt: a coloured bar at 9% of a 1M window, the token count for each category, and a line with rate limits, room left before compact and session length](docs/context-bar.png)
@@ -43,6 +43,8 @@ How it works:
 - The third line shows your rate limits (subscription accounts only), how many tokens are left before auto-compact
   kicks in, and how long the session has been running. It hides itself if there isn't room for it.
 - `/context-bar` hides or shows the bar for the current session.
+- `/context-bar below` moves the bar under the prompt box if you'd rather have it there, and `/context-bar above` moves
+  it back. It remembers your choice (it's also under "Bar position" in `/config`).
 - `/context-bar details` opens a pane with the full breakdown: each category and its share of the window, every memory
   file, MCP servers (and how many of their tools are loaded), your biggest skills, custom agents, and the cache split
   of the last API call. Counting all that costs a few extra requests (same as `/context`), so it only refreshes while
@@ -85,7 +87,7 @@ Commands and settings:
 - It only hands off from the main conversation, and only after a turn finishes normally. If you interrupt a turn it
   cancels, and Claude Code's own auto-compact never triggers the kickoff prompt.
 
-## pin
+## session-pins
 
 Pins a note to the session. `/pin Use Australian spelling` puts it above the prompt with a 📌, and Claude gets it in
 its system prompt as a standing instruction for the rest of the session.
@@ -103,11 +105,11 @@ compact.
 ## What they run and store
 
 None of them send anything outside Claude Code. context-bar only reads the same usage numbers `/context` shows,
-context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, and pin adds your pins to
+context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, and session-pins adds your pins to
 the system prompt and saves them in plugin storage. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [context-handoff](plugins/context-handoff/README.md#what-it-runs-and-stores),
-[pin](plugins/pin/README.md#what-it-runs-and-stores).
+[session-pins](plugins/session-pins/README.md#what-it-runs-and-stores).
 
 ## Notes
 
