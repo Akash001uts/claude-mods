@@ -171,7 +171,7 @@ async function drawBar($: EngineInterface, e: ResolveInput, snap: Snapshot, colu
   const info = showInfo ? infoLine(snap, await read($, now)) : ''
   return (
     <Box flexDirection="column">
-      <Text>
+      <Text wrap="truncate">
         {snap.segments.map((s, i) =>
           cells[i]! > 0 ? (
             <Text color={s.color} dimColor={s.kind === 'free'}>
@@ -210,6 +210,19 @@ async function setPosition($: EngineInterface, value: 'above' | 'below') {
   return 'deny' in saved && saved.deny ? `Couldn't move the bar: ${saved.deny}` : `Context bar moved ${value} the prompt.`
 }
 
+// Shown once after install, and again when INTRO_VERSION goes up for a feature worth telling people about.
+const INTRO_VERSION = '0.3'
+export const INTRO = [
+  'context-bar: the bar above the prompt shows how full your context window is, split by /context category.',
+  '  Line 2 is the token count for each category; line 3 shows rate limits, tokens left before auto-compact and session length.',
+  '  /context-bar hides or shows it for this session.',
+  '  /context-bar details opens a full token breakdown (memory files, MCP servers, skills, cache).',
+  '  /context-bar below moves the bar under the prompt box, /context-bar above moves it back (also under /config).',
+  '  /context-bar help shows this again.',
+]
+
+const showIntro = ($: EngineInterface) => INTRO.forEach(line => $.ui.log(line))
+
 export const register: Register = (on, options) => {
   // Anything but "below" keeps the bar where it has always been.
   const isBelow = String(options.position ?? 'above').trim().toLowerCase() === 'below'
@@ -217,7 +230,7 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'context-bar',
-      description: 'Toggle the context window bar; /context-bar details opens a token breakdown, /context-bar above|below moves it',
+      description: 'Toggle the context window bar; /context-bar details opens a token breakdown, /context-bar above|below moves it, /context-bar help explains it',
     })
     // Only a session that draws the band needs the minute ticker; a reload drops
     // the old module's timers, and the cancel covers session.start firing twice in one load.
@@ -226,6 +239,10 @@ export const register: Register = (on, options) => {
       tick = $.clock.every(TICK_MS, () => {
         void $.clock.now().then(at => update($, now, () => at))
       })
+    if (e.isInteractive && (await $.store.get('introSeen').catch(() => INTRO_VERSION)) !== INTRO_VERSION) {
+      showIntro($)
+      await $.store.set('introSeen', INTRO_VERSION).catch(() => {})
+    }
     // Draw the bar as soon as the session opens; never let a failed read block startup.
     await refresh($, true).catch(() => {})
     return next(e)
@@ -236,6 +253,10 @@ export const register: Register = (on, options) => {
     if (arg === 'details') {
       await openDetails($)
       return { text: 'Context details opened.' }
+    }
+    if (arg === 'help') {
+      showIntro($)
+      return { text: 'Context bar help shown above.' }
     }
     if (arg === 'above' || arg === 'below') return { text: await setPosition($, arg) }
     const nextOn = !(await read($, isOn))
@@ -261,7 +282,8 @@ export const register: Register = (on, options) => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (isBelow || e.props.hasSurvey) return next(e)
+    // Below is a terminal layout; other surfaces keep the bar above.
+    if ((isBelow && e.surface === 'terminal') || e.props.hasSurvey) return next(e)
     const snap = await shown($)
     if (!snap) return next(e)
     const bar = await drawBar($, e, snap, e.props.bodyColumns, e.props.maxRows >= 3)
@@ -279,7 +301,7 @@ export const register: Register = (on, options) => {
   // Below the prompt: the bar takes the hint line's place, and the engine's hint line
   // (shortcuts, esc to interrupt) draws under it.
   on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
-    if (!isBelow) return next(e)
+    if (!isBelow || e.surface !== 'terminal') return next(e)
     const snap = await shown($)
     if (!snap) return next(e)
     const bar = await drawBar($, e, snap, (e.viewport?.columns ?? 80) - 2, true)

@@ -11,7 +11,7 @@
       "name": "context-bar",
       "source": "./plugins/context-bar",
       "description": "Stacked bar of the context window above or below the prompt, coloured by /context category, with rate limits, room before compaction and session length; /context-bar details for a full token breakdown",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
       "name": "context-handoff",

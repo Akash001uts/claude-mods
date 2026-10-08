@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { ContextCategory, SessionUsage } from 'claude-code'
 
-import { allocate } from '../hooks/register'
+import { INTRO, allocate } from '../hooks/register'
 
 const row = (name: string, tokens: number, color: string, kind: ContextCategory['kind']): ContextCategory => ({
   name,
@@ -229,18 +229,23 @@ test('position below draws the bar under the prompt and leaves the band to other
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: 'C:/', surface: 'terminal', isInteractive: true })
 
-  for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ plugin: 'context-bar', surface, ...HINT })
-    expect(await ui.find({ type: 'Text', text: /30% 60\.0k\/200\.0k/ })).toBeDefined()
-    // The engine's hint line still draws.
-    expect(await ui.find({ key: 'engine' })).toBeDefined()
-    await ui.unmount()
+  const hint = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...HINT })
+  expect(await hint.find({ type: 'Text', text: /30% 60\.0k\/200\.0k/ })).toBeDefined()
+  // The engine's hint line still draws.
+  expect(await hint.find({ key: 'engine' })).toBeDefined()
+  await hint.unmount()
+  const band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND })
+  expect(await band.find({ type: 'Text', text: /30%/ })).toBeUndefined()
+  expect(await band.find({ key: 'engine' })).toBeDefined()
+  await band.unmount()
 
-    const band = await $.ui.mount({ plugin: 'context-bar', surface, ...BAND })
-    expect(await band.find({ type: 'Text', text: /30%/ })).toBeUndefined()
-    expect(await band.find({ key: 'engine' })).toBeDefined()
-    await band.unmount()
-  }
+  // Other surfaces keep it above.
+  const deskHint = await $.ui.mount({ plugin: 'context-bar', surface: 'desktop', ...HINT })
+  expect(await deskHint.find({ type: 'Text', text: /30%/ })).toBeUndefined()
+  await deskHint.unmount()
+  const deskBand = await $.ui.mount({ plugin: 'context-bar', surface: 'desktop', ...BAND })
+  expect(await deskBand.find({ type: 'Text', text: /30%/ })).toBeDefined()
+  await deskBand.unmount()
 })
 
 test('position above leaves the hint line alone', async ($, on) => {
@@ -267,4 +272,27 @@ test('/context-bar below saves the position', async ($, on) => {
   const res = await $.command.run({ command: 'context-bar', args: 'Below', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
   expect(res.text).toBe('Context bar moved below the prompt.')
   expect(sets).toEqual([{ key: 'context-bar.position', value: 'below' }])
+})
+
+test('explains itself once after install, and again with /context-bar help', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('session.usage', () => ({ value: USAGE }))
+  on('command.register', () => ({ value: { command: 'context-bar' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  const logged: string[] = []
+  on('ui.log', ($, e) => {
+    logged.push(e.text)
+    return { value: undefined }
+  })
+
+  await $.session.start({ cwd: 'C:/', surface: 'terminal', isInteractive: true })
+  expect(logged).toEqual(INTRO)
+  // A second session (or a reload) stays quiet.
+  await $.session.start({ cwd: 'C:/', surface: 'terminal', isInteractive: true })
+  expect(logged.length).toBe(INTRO.length)
+
+  const res = await $.command.run({ command: 'context-bar', args: 'help', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+  expect(res.text).toBe('Context bar help shown above.')
+  expect(logged.length).toBe(INTRO.length * 2)
 })

@@ -40,6 +40,7 @@ It's also good for finding what's eating your context, like MCP servers you forg
 How it works:
 
 - It turns on at the start of every session and updates after each turn.
+- The first time it runs it prints a quick rundown of the commands in the chat, and `/context-bar help` shows it again.
 - The third line shows your rate limits (subscription accounts only), how many tokens are left before auto-compact
   kicks in, and how long the session has been running. It hides itself if there isn't room for it.
 - `/context-bar` hides or shows the bar for the current session.
