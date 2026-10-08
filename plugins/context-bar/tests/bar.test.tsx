@@ -96,6 +96,8 @@ test('draws the bar, toggles off and on with /context-bar', async ($, on) => {
     expect(await ui.find({ type: 'Text', text: /30% 60\.0k\/200\.0k/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /Messages 56\.0k/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /MCP tools/ })).toBeUndefined()
+    // What draws beneath it still does.
+    expect(await ui.find({ key: 'engine' })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -209,4 +211,60 @@ test('/context-bar details opens the breakdown pane without toggling the bar', a
 
   // The bar is still on: the next plain toggle turns it off.
   expect((await run('')).text).toBe('Context bar off.')
+})
+
+const HINT = {
+  component: 'PromptHint' as const,
+  props: { isDraft: false, isWorking: false, hint: '? for shortcuts' },
+}
+
+test('position below draws the bar under the prompt and leaves the band to others', { options: { position: 'below' } }, async ($, on) => {
+  mock.clock(on)
+  on('session.usage', () => ({ value: USAGE }))
+  on('ui.render', ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box key="engine" />
+  })
+  on('command.register', () => ({ value: { command: 'context-bar' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: 'C:/', surface: 'terminal', isInteractive: true })
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ plugin: 'context-bar', surface, ...HINT })
+    expect(await ui.find({ type: 'Text', text: /30% 60\.0k\/200\.0k/ })).toBeDefined()
+    // The engine's hint line still draws.
+    expect(await ui.find({ key: 'engine' })).toBeDefined()
+    await ui.unmount()
+
+    const band = await $.ui.mount({ plugin: 'context-bar', surface, ...BAND })
+    expect(await band.find({ type: 'Text', text: /30%/ })).toBeUndefined()
+    expect(await band.find({ key: 'engine' })).toBeDefined()
+    await band.unmount()
+  }
+})
+
+test('position above leaves the hint line alone', async ($, on) => {
+  mock.clock(on)
+  on('session.usage', () => ({ value: USAGE }))
+  on('ui.render', ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box key="engine" />
+  })
+  on('command.register', () => ({ value: { command: 'context-bar' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: 'C:/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...HINT })
+  expect(await ui.find({ type: 'Text', text: /30%/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('/context-bar below saves the position', async ($, on) => {
+  const sets: unknown[] = []
+  on('config.set', ($, e) => {
+    sets.push({ key: e.key, value: e.value })
+    return { value: e.value }
+  })
+  const res = await $.command.run({ command: 'context-bar', args: 'Below', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+  expect(res.text).toBe('Context bar moved below the prompt.')
+  expect(sets).toEqual([{ key: 'context-bar.position', value: 'below' }])
 })

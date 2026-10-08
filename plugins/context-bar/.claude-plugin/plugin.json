@@ -1,10 +1,18 @@
 {
   "name": "context-bar",
-  "version": "0.2.1",
-  "description": "Stacked bar of the context window above the prompt, coloured by /context category, with rate limits, room before compaction and session length; /context-bar details for a full token breakdown",
+  "version": "0.3.0",
+  "description": "Stacked bar of the context window above or below the prompt, coloured by /context category, with rate limits, room before compaction and session length; /context-bar details for a full token breakdown",
   "author": {
     "name": "Akash Bhatnagar"
   },
   "license": "MIT",
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "position": {
+      "type": "string",
+      "title": "Bar position",
+      "description": "above draws the bar above the prompt, below draws it under the prompt; /context-bar above or /context-bar below sets it too",
+      "default": "above"
+    }
+  }
 }

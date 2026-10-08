@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, SessionRateLimit } from 'claude-code'
+import type { EngineInterface, Register, ResolveInput, SessionRateLimit } from 'claude-code'
 
 import type { Details, Limit, Row, Segment, Snapshot } from '../types'
 
@@ -161,11 +161,63 @@ async function openDetails($: EngineInterface) {
   await refreshDetails($).catch(() => {})
 }
 
-export const register: Register = on => {
+// The bar, its legend and (when there's room for it) the info line, laid out `columns` wide.
+async function drawBar($: EngineInterface, e: ResolveInput, snap: Snapshot, columns: number, showInfo: boolean) {
+  const { Box, Text } = $.ui.resolve(e)
+  const summary = ` ${snap.percent}% ${short(snap.total)}/${short(snap.max)}`
+  const width = Math.max(10, columns - summary.length)
+  const cells = allocate(snap.segments, snap.max, width)
+  const used = snap.segments.filter(s => s.kind === 'used')
+  const info = showInfo ? infoLine(snap, await read($, now)) : ''
+  return (
+    <Box flexDirection="column">
+      <Text>
+        {snap.segments.map((s, i) =>
+          cells[i]! > 0 ? (
+            <Text color={s.color} dimColor={s.kind === 'free'}>
+              {GLYPH[s.kind].repeat(cells[i]!)}
+            </Text>
+          ) : null,
+        )}
+        <Text dimColor>{summary}</Text>
+      </Text>
+      <Text wrap="truncate">
+        {used.map(s => (
+          <Text>
+            <Text color={s.color}>■</Text>
+            <Text dimColor> {s.name} {short(s.tokens)}  </Text>
+          </Text>
+        ))}
+      </Text>
+      {info ? (
+        <Text wrap="truncate" dimColor>
+          {info}
+        </Text>
+      ) : null}
+    </Box>
+  )
+}
+
+// The bar to draw now, or null when it's hidden or there's nothing to show yet.
+async function shown($: EngineInterface) {
+  if (!(await read($, isOn))) return null
+  const snap = await read($, snapshot)
+  return snap && snap.segments.length > 0 ? snap : null
+}
+
+async function setPosition($: EngineInterface, value: 'above' | 'below') {
+  const saved = await $.config.set({ key: 'context-bar.position', value }).catch((err: unknown) => ({ deny: String(err) }))
+  return 'deny' in saved && saved.deny ? `Couldn't move the bar: ${saved.deny}` : `Context bar moved ${value} the prompt.`
+}
+
+export const register: Register = (on, options) => {
+  // Anything but "below" keeps the bar where it has always been.
+  const isBelow = String(options.position ?? 'above').trim().toLowerCase() === 'below'
+
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'context-bar',
-      description: 'Toggle the context window bar above the prompt; /context-bar details opens a token breakdown',
+      description: 'Toggle the context window bar; /context-bar details opens a token breakdown, /context-bar above|below moves it',
     })
     // Only a session that draws the band needs the minute ticker; a reload drops
     // the old module's timers, and the cancel covers session.start firing twice in one load.
@@ -180,10 +232,12 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'context-bar' }, async ($, e) => {
-    if (e.args.trim().toLowerCase() === 'details') {
+    const arg = e.args.trim().toLowerCase()
+    if (arg === 'details') {
       await openDetails($)
       return { text: 'Context details opened.' }
     }
+    if (arg === 'above' || arg === 'below') return { text: await setPosition($, arg) }
     const nextOn = !(await read($, isOn))
     await update($, isOn, () => nextOn)
     if (nextOn) await refresh($, true)
@@ -207,42 +261,34 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey || !(await read($, isOn))) return next(e)
-    const snap = await read($, snapshot)
-    if (!snap || snap.segments.length === 0) return next(e)
-
-    const { Box, Text } = $.ui.resolve(e)
-    const summary = ` ${snap.percent}% ${short(snap.total)}/${short(snap.max)}`
-    const width = Math.max(10, e.props.bodyColumns - summary.length)
-    const cells = allocate(snap.segments, snap.max, width)
-    const used = snap.segments.filter(s => s.kind === 'used')
-    const info = e.props.maxRows >= 3 ? infoLine(snap, await read($, now)) : ''
-
+    if (isBelow || e.props.hasSurvey) return next(e)
+    const snap = await shown($)
+    if (!snap) return next(e)
+    const bar = await drawBar($, e, snap, e.props.bodyColumns, e.props.maxRows >= 3)
+    // Whatever else draws above the prompt (another mod's band) stays, under the bar.
+    const beneath = await next(e)
+    const { Box } = $.ui.resolve(e)
     return (
       <Box flexDirection="column">
-        <Text>
-          {snap.segments.map((s, i) =>
-            cells[i]! > 0 ? (
-              <Text color={s.color} dimColor={s.kind === 'free'}>
-                {GLYPH[s.kind].repeat(cells[i]!)}
-              </Text>
-            ) : null,
-          )}
-          <Text dimColor>{summary}</Text>
-        </Text>
-        <Text wrap="truncate">
-          {used.map(s => (
-            <Text>
-              <Text color={s.color}>■</Text>
-              <Text dimColor> {s.name} {short(s.tokens)}  </Text>
-            </Text>
-          ))}
-        </Text>
-        {info ? (
-          <Text wrap="truncate" dimColor>
-            {info}
-          </Text>
-        ) : null}
+        {bar}
+        {beneath}
+      </Box>
+    )
+  })
+
+  // Below the prompt: the bar takes the hint line's place, and the engine's hint line
+  // (shortcuts, esc to interrupt) draws under it.
+  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
+    if (!isBelow) return next(e)
+    const snap = await shown($)
+    if (!snap) return next(e)
+    const bar = await drawBar($, e, snap, (e.viewport?.columns ?? 80) - 2, true)
+    const hint = await next(e)
+    const { Box } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="column">
+        {bar}
+        {hint}
       </Box>
     )
   })
