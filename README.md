@@ -5,26 +5,32 @@ for assignments and side projects, and two things kept annoying me: I never knew
 until it auto-compacted, and when it did compact I'd lose track of where I was. So I built these to fix that for
 myself. They're small, but they've made my sessions a lot less messy, so I figured I'd share them.
 
+| Mod | What it does | Status |
+| --- | --- | --- |
+| [context-bar](plugins/context-bar) | Always-on bar showing how full the context window is, plus your rate limits | Published in Claude's plugin directory |
+| [context-handoff](plugins/context-handoff) | Hands a long session off cleanly before it compacts | In review for the directory |
+| [pin](plugins/pin) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
+
 ## Install
 
 ```
 /plugin marketplace add Akash001uts/claude-mods
 /plugin install context-bar@akash-mods
 /plugin install context-handoff@akash-mods
+/plugin install pin@akash-mods
 ```
 
-You need a recent Claude Code build that supports mods (function-hook plugins). I built these on 2.1.288.
+You can install just the ones you want. You need a recent Claude Code build that supports mods
+(function-hook plugins). I built these on 2.1.288.
+
+To get new versions, run `/plugin marketplace update akash-mods`.
 
 ## context-bar
 
 A bar above the prompt that shows how full your context window is, split into the same categories `/context` uses
 (system prompt, tools, memory files, messages and so on).
 
-```
-███████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒▒ 30% 60.0k/200.0k
-■ System prompt 4.0k  ■ Messages 56.0k
-5h 42% (resets in 2h 14m)  ·  7d 18%  ·  100.0k to compact  ·  session 2h 5m
-```
+![context-bar above the prompt: a coloured bar at 9% of a 1M window, the token count for each category, and a line with rate limits, room left before compact and session length](docs/context-bar.png)
 
 **Why it's useful:** I used to run `/context` every so often just to check. Now it's always there, so I can see when a
 session is getting heavy and decide to wrap up before things get compacted. The third line shows your 5-hour and 7-day
@@ -79,10 +85,36 @@ Commands and settings:
 - It only hands off from the main conversation, and only after a turn finishes normally. If you interrupt a turn it
   cancels, and Claude Code's own auto-compact never triggers the kickoff prompt.
 
+## pin
+
+Pins a note to the session. `/pin Use Australian spelling` puts it above the prompt with a 📌, and Claude gets it in
+its system prompt as a standing instruction for the rest of the session.
+
+**Why it's useful:** there's usually one or two things I want Claude to keep in mind the whole time ("don't touch the
+tests folder", which branch I'm on, how I want things worded). Said once in chat, they scroll away and can get lost
+when the session compacts. Pinned, they stay on screen for me and in the system prompt for Claude, so they survive a
+compact.
+
+- `/pin <text>` pins a note, and `/pin` on its own pins the last message you typed.
+- `/pin list` shows them all, `/unpin 2` removes one, `/unpin` removes the latest and `/unpin all` clears them.
+- `/pin hide` and `/pin show` hide or show them above the prompt (Claude still sees them).
+- Pins come back if you resume the session, but `/clear` or a new session starts fresh.
+
+## What they run and store
+
+None of them send anything outside Claude Code. context-bar only reads the same usage numbers `/context` shows,
+context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, and pin adds your pins to
+the system prompt and saves them in plugin storage. Each plugin's own README has
+the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
+[context-handoff](plugins/context-handoff/README.md#what-it-runs-and-stores),
+[pin](plugins/pin/README.md#what-it-runs-and-stores).
+
 ## Notes
 
 These are still pretty new, so there are probably rough edges. If something breaks or you've got an idea, feel free to
-open an issue.
+[open an issue](https://github.com/Akash001uts/claude-mods/issues).
+
+This is a personal project and isn't affiliated with or endorsed by Anthropic.
 
 ## Licence
 
