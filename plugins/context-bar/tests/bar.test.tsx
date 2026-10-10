@@ -263,15 +263,28 @@ test('position above leaves the hint line alone', async ($, on) => {
   await ui.unmount()
 })
 
-test('/context-bar below saves the position', async ($, on) => {
-  const sets: unknown[] = []
-  on('config.set', ($, e) => {
-    sets.push({ key: e.key, value: e.value })
-    return { value: e.value }
+test('/context-bar below and above move the bar', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('session.usage', () => ({ value: USAGE }))
+  on('ui.render', ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box key="engine" />
   })
+  on('command.register', () => ({ value: { command: 'context-bar' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: 'C:/', surface: 'terminal', isInteractive: true })
+
   const res = await $.command.run({ command: 'context-bar', args: 'Below', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
   expect(res.text).toBe('Context bar moved below the prompt.')
-  expect(sets).toEqual([{ key: 'context-bar.position', value: 'below' }])
+  const hint = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...HINT })
+  expect(await hint.find({ type: 'Text', text: /30%/ })).toBeDefined()
+  await hint.unmount()
+
+  await $.command.run({ command: 'context-bar', args: 'above', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+  const band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND })
+  expect(await band.find({ type: 'Text', text: /30%/ })).toBeDefined()
+  await band.unmount()
 })
 
 test('explains itself once after install, and again with /context-bar help', async ($, on) => {

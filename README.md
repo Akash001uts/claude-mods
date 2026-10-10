@@ -45,7 +45,7 @@ How it works:
   kicks in, and how long the session has been running. It hides itself if there isn't room for it.
 - `/context-bar` hides or shows the bar for the current session.
 - `/context-bar below` moves the bar under the prompt box if you'd rather have it there, and `/context-bar above` moves
-  it back. It remembers your choice (it's also under "Bar position" in `/config`).
+  it back. It remembers your choice ("Bar position" in `/config` sets where it starts).
 - `/context-bar details` opens a pane with the full breakdown: each category and its share of the window, every memory
   file, MCP servers (and how many of their tools are loaded), your biggest skills, custom agents, and the cache split
   of the last API call. Counting all that costs a few extra requests (same as `/context`), so it only refreshes while

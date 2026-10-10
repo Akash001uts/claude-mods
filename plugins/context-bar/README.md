@@ -19,8 +19,9 @@ what's eating my context, like MCP servers I forgot were still connected.
 - The third line shows your 5-hour and 7-day rate limits (subscription accounts only), how many tokens are left before
   auto-compact, and how long the session has been running. It hides itself if there isn't room for it.
 - `/context-bar` hides or shows the bar for the current session.
-- `/context-bar below` moves the bar under the prompt box, and `/context-bar above` moves it back. You can also change
-  it under "Bar position" in `/config`. Above is the default, and the desktop app always keeps it above.
+- `/context-bar below` moves the bar under the prompt box, and `/context-bar above` moves it back. It remembers that
+  across sessions. "Bar position" in `/config` sets the starting position, and the command's choice wins over it once
+  you've used it. Above is the default, and the desktop app always keeps it above.
 - `/context-bar details` opens a pane with the full breakdown: each category and its share of the window, every memory
   file, MCP servers (and how many of their tools are loaded), your biggest skills, custom agents, and the cache split of
   the last API call. Press `r` to refresh it.
@@ -32,8 +33,8 @@ what's eating my context, like MCP servers I forgot were still connected.
 - The details pane asks Claude Code for the full token count, which costs a few extra requests (same as running
   `/context`). So it only refreshes while the pane is open, after each turn or when you press `r`.
 - Whether the bar is on is kept for the current session only. The only things saved are where you put the bar (above
-  or below), which goes in your Claude Code settings like any other plugin option, and a note in the plugin's own
-  storage that you've seen the rundown.
+  or below) and a note that you've seen the rundown, both in the plugin's own storage. It doesn't change your Claude
+  Code settings or environment variables.
 
 ## Licence
 

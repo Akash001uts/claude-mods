@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { ConfigSetResult, EngineInterface, Register, ResolveInput, SessionRateLimit } from 'claude-code'
+import type { EngineInterface, Register, ResolveInput, SessionRateLimit } from 'claude-code'
 
 import type { Details, Limit, Row, Segment, Snapshot } from '../types'
 
@@ -205,9 +205,15 @@ async function shown($: EngineInterface) {
   return snap && snap.segments.length > 0 ? snap : null
 }
 
-const moved = (saved: ConfigSetResult, where: string) =>
-  saved.deny ? `Couldn't move the bar: ${saved.deny}` : `Context bar moved ${where} the prompt.`
-const failed = (err: unknown): ConfigSetResult => ({ deny: String(err) })
+// Where /context-bar above|below put the bar, in the plugin's own storage, so it never touches settings.
+async function move($: EngineInterface, where: 'above' | 'below') {
+  try {
+    await $.store.set('position', where)
+    return `Context bar moved ${where} the prompt.`
+  } catch (err) {
+    return `Couldn't move the bar: ${String(err)}`
+  }
+}
 
 // Shown once after install, and again when INTRO_VERSION goes up for a feature worth telling people about.
 const INTRO_VERSION = '0.3'
@@ -216,15 +222,20 @@ export const INTRO = [
   '  Line 2 is the token count for each category; line 3 shows rate limits, tokens left before auto-compact and session length.',
   '  /context-bar hides or shows it for this session.',
   '  /context-bar details opens a full token breakdown (memory files, MCP servers, skills, cache).',
-  '  /context-bar below moves the bar under the prompt box, /context-bar above moves it back (also under /config).',
+  '  /context-bar below moves the bar under the prompt box, /context-bar above moves it back.',
   '  /context-bar help shows this again.',
 ]
+
+// The saved choice from /context-bar above|below wins over the /config option; anything but "below" keeps the
+// bar where it has always been. Read while drawing, so a move redraws straight away.
+async function isBelow($: EngineInterface, option: unknown) {
+  const saved = await $.store.get('position').catch(() => undefined)
+  return String(saved ?? option ?? 'above').trim().toLowerCase() === 'below'
+}
 
 const showIntro = ($: EngineInterface) => INTRO.forEach(line => $.ui.log(line))
 
 export const register: Register = (on, options) => {
-  // Anything but "below" keeps the bar where it has always been.
-  const isBelow = String(options.position ?? 'above').trim().toLowerCase() === 'below'
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -257,9 +268,7 @@ export const register: Register = (on, options) => {
       showIntro($)
       return { text: 'Context bar help shown above.' }
     }
-    // Each settings call is written out in full, so the plugin directory can read what it sets.
-    if (arg === 'below') return { text: moved(await $.config.set({ key: 'context-bar.position', value: 'below' }).catch(failed), 'below') }
-    if (arg === 'above') return { text: moved(await $.config.set({ key: 'context-bar.position', value: 'above' }).catch(failed), 'above') }
+    if (arg === 'below' || arg === 'above') return { text: await move($, arg) }
     const nextOn = !(await read($, isOn))
     await update($, isOn, () => nextOn)
     if (nextOn) await refresh($, true)
@@ -284,7 +293,7 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     // Below is a terminal layout; other surfaces keep the bar above.
-    if ((isBelow && e.surface === 'terminal') || e.props.hasSurvey) return next(e)
+    if ((e.surface === 'terminal' && (await isBelow($, options.position))) || e.props.hasSurvey) return next(e)
     const snap = await shown($)
     if (!snap) return next(e)
     const bar = await drawBar($, e, snap, e.props.bodyColumns, e.props.maxRows >= 3)
@@ -302,7 +311,7 @@ export const register: Register = (on, options) => {
   // Below the prompt: the bar takes the hint line's place, and the engine's hint line
   // (shortcuts, esc to interrupt) draws under it.
   on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
-    if (!isBelow || e.surface !== 'terminal') return next(e)
+    if (e.surface !== 'terminal' || !(await isBelow($, options.position))) return next(e)
     const snap = await shown($)
     if (!snap) return next(e)
     const bar = await drawBar($, e, snap, (e.viewport?.columns ?? 80) - 2, true)
