@@ -10,6 +10,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | [context-bar](plugins/context-bar) | Always-on bar showing how full the context window is, plus your rate limits | Published in Claude's plugin directory |
 | [context-handoff](plugins/context-handoff) | Hands a long session off cleanly before it compacts | In review for the directory |
 | [session-pins](plugins/session-pins) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
+| [voice](plugins/voice) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
 
 ## Install
 
@@ -18,6 +19,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin install context-bar@akash-mods
 /plugin install context-handoff@akash-mods
 /plugin install session-pins@akash-mods
+/plugin install voice@akash-mods
 ```
 
 You can install just the ones you want. You need a recent Claude Code build that supports mods
@@ -103,14 +105,30 @@ compact.
 - `/pin hide` and `/pin show` hide or show them above the prompt (Claude still sees them).
 - Pins come back if you resume the session, but `/clear` or a new session starts fresh.
 
+## voice
+
+Learns how you write and then drafts messages in your voice. The first time you open Claude Code after installing it,
+you tick which sources it can learn from (Gmail, Slack, LinkedIn posts, assignments and reports) and skip the rest.
+After that you just ask normally, like "reply to this recruiter" or "make it less formal", and it picks the right
+voice and how formal to be.
+
+**Why it's useful:** I was spending two or three rounds on every email or post getting the tone right. Now the first
+draft is already close, and when I correct something ("remember I never say X") it sticks.
+
+- It keeps a profile at `~/.claude/voice/profile.md` that you can open and edit.
+- `/voice` shows the profile and `/voice setup` adds more sources later.
+- It only reads the sources you tick, through your own connectors, and keeps a short description plus a few short
+  excerpts, not your messages.
+
 ## What they run and store
 
-None of them send anything outside Claude Code. context-bar only reads the same usage numbers `/context` shows,
-context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, and session-pins adds your pins to
-the system prompt and saves them in plugin storage. Each plugin's own README has
+None of them send anything outside Claude Code (voice reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
+context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, session-pins adds your pins to
+the system prompt and saves them in plugin storage, and voice adds your profile to the system prompt. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [context-handoff](plugins/context-handoff/README.md#what-it-runs-and-stores),
-[session-pins](plugins/session-pins/README.md#what-it-runs-and-stores).
+[session-pins](plugins/session-pins/README.md#what-it-runs-and-stores),
+[voice](plugins/voice/README.md#what-it-runs-and-stores).
 
 ## Notes
 

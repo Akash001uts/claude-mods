@@ -22,7 +22,13 @@
     {
       "name": "session-pins",
       "source": "./plugins/session-pins",
-      "description": "Pin notes to a session: /pin keeps them on show above the prompt and in Claude's system prompt, so they hold through compaction and come back on resume",
+      "description": "Pin notes to a session: /pin keeps them on show above the prompt and in Claude's system prompt, so they hold through compaction, come back on resume and can follow you into your next session",
+      "version": "0.2.0"
+    },
+    {
+      "name": "voice",
+      "source": "./plugins/voice",
+      "description": "Drafts and edits messages in your own voice. A one-time setup learns how you write from the sources you tick (Gmail, Slack, LinkedIn posts, assignments), then plain requests like \"reply to this recruiter\" come out sounding like you",
       "version": "0.1.0"
     }
   ]
