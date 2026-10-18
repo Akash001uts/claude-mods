@@ -77,7 +77,7 @@ const start = async ($: Engine, isInteractive = true) => {
   await clock.settle()
 }
 const run = async ($: Engine, args: string) => {
-  const r = await $.command.run({ command: 'voice', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+  const r = await $.command.run({ command: 'write', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
   await clock.settle()
   return r
 }
@@ -214,7 +214,7 @@ test('voicesIn counts custom headings and skips the bookkeeping ones', () => {
   expect(voicesIn(`${PROFILE}\n\n## Cover letters\nSummary: formal`)).toEqual(['Email', 'Academic', 'Cover letters'])
 })
 
-test('/voice shows each summary and numbered rules; /voice setup asks again', async ($, on) => {
+test('/write shows each summary and numbered rules; /write setup asks again', async ($, on) => {
   const seen = engine(on, { answer: SOURCES[1], profile: PROFILE })
   await start($)
   const shown = (await run($, '')).text
@@ -227,20 +227,20 @@ test('/voice shows each summary and numbered rules; /voice setup asks again', as
   expect(seen.submitted[0]).toMatch(/from: Slack\./)
 })
 
-test('/voice with anything else shows the usage line', async ($, on) => {
+test('/write with anything else shows the usage line', async ($, on) => {
   engine(on, { answer: null, profile: PROFILE })
   await start($)
-  expect((await run($, 'email')).text).toBe('Usage: /voice [setup]')
+  expect((await run($, 'email')).text).toBe('Usage: /write [setup]')
 })
 
 test('a setup prompt that fails to submit says how to retry', async ($, on) => {
   const seen = engine(on, { answer: SOURCES[0], submitFails: true })
   await start($)
-  expect(seen.toasts).toEqual(["Voice setup couldn't start: run /voice setup to try again"])
+  expect(seen.toasts).toEqual(["Voice setup couldn't start: run /write setup to try again"])
 })
 
-test('without a profile Claude only gets a pointer to /voice setup', async ($, on) => {
+test('without a profile Claude only gets a pointer to /write setup', async ($, on) => {
   engine(on, { answer: null, saved: { setupOffered: true } })
   await start($)
-  expect(await guide($)).toMatch(/\/voice setup/)
+  expect(await guide($)).toMatch(/\/write setup/)
 })

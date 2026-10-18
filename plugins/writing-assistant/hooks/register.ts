@@ -18,7 +18,7 @@ export const SOURCES = [
 // The name the setup prompt uses for each, without the bracket.
 const shortName = (label: string) => label.replace(/\s*\(.*\)$/, '')
 
-export const SKIPPED = 'Voice setup skipped. /voice setup brings it back.'
+export const SKIPPED = 'Voice setup skipped. /write setup brings it back.'
 export const TRIMMED = 'writing-assistant: your profile is over 8k characters, so Claude gets the summaries and reads the file for the rest.'
 
 let profile = ''
@@ -117,7 +117,7 @@ export function parseAnswer(answer: string) {
   return { picked, other }
 }
 
-// The tick-box list. Dismissed or nothing given: setup waits for /voice setup.
+// The tick-box list. Dismissed or nothing given: setup waits for /write setup.
 async function askSources($: EngineInterface) {
   const answer = await $.ui
     .ask(QUESTION, { header: 'Voice', multiSelect: true, options: [...SOURCES] })
@@ -136,7 +136,7 @@ async function askSources($: EngineInterface) {
   ].join(' ')
   // From a timer: a submit from inside a command.run hook would wait on the turn that hook holds.
   $.clock.after(0, () => {
-    void $.prompt.submit({ text }).catch(() => $.ui.toast("Voice setup couldn't start: run /voice setup to try again"))
+    void $.prompt.submit({ text }).catch(() => $.ui.toast("Voice setup couldn't start: run /write setup to try again"))
   })
 }
 
@@ -153,7 +153,7 @@ async function offerSetup($: EngineInterface) {
 
 const guide = () => {
   if (!profile) {
-    return `# Voice\nThe user has no voice profile yet. If they ask for help drafting messages, mention once that \`/voice setup\` learns how they write.`
+    return `# Voice\nThe user has no voice profile yet. If they ask for help drafting messages, mention once that \`/write setup\` learns how they write.`
   }
   const { text, isTrimmed } = promptProfile(profile)
   const lines = [
@@ -164,10 +164,10 @@ const guide = () => {
   return [...lines, '', text].join('\n')
 }
 
-// What /voice shows: each voice's summary, then the remembered rules, numbered so "forget rule 2" has a target.
+// What /write shows: each voice's summary, then the remembered rules, numbered so "forget rule 2" has a target.
 function describe() {
   const sections = sectionsOf(profile)
-  if (sections.length === 0) return `Profile: ${profilePath}\nIt has no "## " sections, so Claude gets it as written. /voice setup adds sources.`
+  if (sections.length === 0) return `Profile: ${profilePath}\nIt has no "## " sections, so Claude gets it as written. /write setup adds sources.`
   const voices = sections.filter(isVoice)
   const rules = (sections.find(isRemembered)?.text ?? '')
     .split('\n')
@@ -179,15 +179,15 @@ function describe() {
     ...voices.map(s => `  ${s.name}: ${summaryOf(s) ?? '(no summary line)'}`),
     rules.length ? 'Remembered:' : 'Remembered: nothing yet',
     ...rules,
-    '/voice setup adds sources. Ask Claude to forget a rule by number, or edit the file.',
+    '/write setup adds sources. Ask Claude to forget a rule by number, or edit the file.',
   ].join('\n')
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
-      name: 'voice',
-      description: 'Learn how you write: /voice setup picks the sources; on its own shows your profile',
+      name: 'write',
+      description: 'Learn how you write: /write setup picks the sources; on its own shows your profile',
       argumentHint: '[setup]',
     })
     const started = await next(e)
@@ -207,16 +207,16 @@ export const register: Register = on => {
     return { ...composed, sections: [...composed.sections, { id: `${PLUGIN}:guide`, text: guide(), scope: 'session' as const }] }
   })
 
-  on('command.run', { command: 'voice' }, async ($, e) => {
+  on('command.run', { command: 'write' }, async ($, e) => {
     const arg = e.args.trim().toLowerCase()
     if (arg === 'setup') {
       if (!profilePath) profilePath = await findProfilePath($).catch(() => '')
       $.clock.after(0, () => void askSources($).catch(() => {}))
       return { text: 'Pick the sources to learn from.' }
     }
-    if (arg !== '') return { text: 'Usage: /voice [setup]' }
+    if (arg !== '') return { text: 'Usage: /write [setup]' }
     await refreshProfile($).catch(() => {})
-    if (!profile) return { text: 'No voice profile yet. /voice setup learns how you write.' }
+    if (!profile) return { text: 'No voice profile yet. /write setup learns how you write.' }
     return { text: describe() }
   })
 }

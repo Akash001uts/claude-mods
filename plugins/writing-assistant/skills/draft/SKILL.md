@@ -68,7 +68,7 @@ The `## Nudges` table isn't in the system prompt: read the file before updating 
 
 - **"Remember X"** (or "never do X", "always X"): add it to `## Remembered` in the profile file now with Edit, and
   confirm in one short line.
-- **"Forget rule N"** (numbered as `/voice` shows them) or "forget that I ...": remove that line from
+- **"Forget rule N"** (numbered as `/write` shows them) or "forget that I ...": remove that line from
   `## Remembered` and confirm in one short line.
 - **A refinement** ("less formal", "shorter", "drop the exclamation marks"): apply it, then add or bump that row in
   `## Nudges` (voice, direction, count). When a row reaches 3 and isn't marked offered, ask once in one line:

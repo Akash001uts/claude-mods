@@ -100,7 +100,7 @@ Excerpts:
 | --- | --- | --- | --- |
 ```
 
-Every voice needs its `Summary:` line: `/voice` shows it, and it's what stays in the system prompt when the profile
+Every voice needs its `Summary:` line: `/write` shows it, and it's what stays in the system prompt when the profile
 gets long. Keep the whole file under about 8,000 characters.
 
 Excerpts are the only raw text kept. Before saving one, take out phone numbers, email addresses, student or staff
@@ -115,4 +115,4 @@ formality wrong. Don't show the samples or drafts; just say in one line what you
 ## 6. Finish
 
 Show one summary line per voice you learned, say the profile is at `<path>` (with a backup at `profile.bak.md` if
-there was one) and can be edited by hand, and say that `/voice setup` adds more sources later. Then stop.
+there was one) and can be edited by hand, and say that `/write setup` adds more sources later. Then stop.

@@ -116,7 +116,7 @@ voice and how formal to be.
 draft is already close, and when I correct something ("remember I never say X") it sticks.
 
 - It keeps a profile at `~/.claude/writing-assistant/profile.md` that you can open and edit.
-- `/voice` shows the profile and `/voice setup` adds more sources later.
+- `/write` shows the profile and `/write setup` adds more sources later.
 - It only reads the sources you tick, through your own connectors, and keeps a short description plus a few short
   excerpts, not your messages.
 

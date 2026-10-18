@@ -14,7 +14,7 @@ uses it every time I ask for a draft.
   - Assignments and reports (files)
 
   Tick whichever ones you want and the rest are skipped. You can also type your own under "Other" (say "my blog" or
-  "cover letters I've sent"). If you close the list, nothing happens, and `/voice setup` brings it back whenever you
+  "cover letters I've sent"). If you close the list, nothing happens, and `/write setup` brings it back whenever you
   want. If you quit before the list shows up, it asks again next time.
 - Claude then goes through each one you picked:
   - **Gmail and Slack:** it reads a sample of your own messages through the connector, skipping auto-replies,
@@ -33,13 +33,13 @@ uses it every time I ask for a draft.
 - If you give it your own draft, it only makes small fixes and keeps your wording.
 - "Remember I never say 'I hope this finds you well'" saves that rule to your profile straight away. "Forget rule 2" takes one out. If you keep asking for the same change (say "shorter" three times for
   emails), it asks once if you want that to be the default.
-- `/voice` shows where your profile is, a summary of each voice and your saved rules (numbered). `/voice setup` adds
+- `/write` shows where your profile is, a summary of each voice and your saved rules (numbered). `/write setup` adds
   more sources later without wiping what's there.
 
 ## What it runs and stores
 
 - **What it asks.** In the first session after install (not under `claude -p`), one question in Claude Code's own
-  question box: which sources to learn from. It only asks on its own until you answer or close it. `/voice setup`
+  question box: which sources to learn from. It only asks on its own until you answer or close it. `/write setup`
   asks again.
 - **What it sends to Claude.** If you pick something, it submits one prompt asking Claude to run the setup skill.
   That prompt only has the names of the sources you picked (and anything you typed under "Other") and the profile's
@@ -52,7 +52,7 @@ uses it every time I ask for a draft.
 - **What it adds to the system prompt.** If you have a profile, one section with your saved rules and your voices
   (just the summary lines if the profile is over 8,000 characters), and a note telling Claude to use the draft skill
   for writing requests. The table it uses to count repeated requests stays out. Without a profile, a single line
-  saying `/voice setup` exists.
+  saying `/write setup` exists.
 - **What it stores.** The profile file (and `profile.bak.md`, the copy from before the last setup) is written by
   Claude, not by the mod. It holds a description of each voice plus up to three short excerpts per voice (with phone
   numbers, emails, IDs and other people's names taken out), never whole messages. The mod itself only stores one
