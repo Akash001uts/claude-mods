@@ -23,8 +23,12 @@ it can get lost in the summary. This mod lets you pin it instead.
   band, Tab to the pin and Enter.
 - If you have more than a few pins, the band shows the first couple and a "+N more" line so it doesn't take over the
   screen.
-- Pins belong to the session. If you resume it with `claude --resume` they come back, but `/clear` or a new session
-  starts with none.
+- Pins stay until you unpin them, not just for one session. When you start a new session (or `/clear`), it asks
+  whether to keep the pins from your last session, listing them so you know what you're keeping. "Keep them" carries
+  them over, "Unpin them" leaves them behind and it won't ask about those again. If you close the question without
+  answering, they're kept, and `/unpin all` clears them.
+- If you resume a session with `claude --resume`, its own pins come back without asking.
+- Once you `/unpin all`, there's nothing to carry over, so the next session doesn't ask.
 
 Up to 20 pins, each up to 1000 characters.
 
@@ -35,9 +39,13 @@ Up to 20 pins, each up to 1000 characters.
   the conversation, so it costs a bit more that one time.
 - **What it reads.** The text of the prompts you type, only so `/pin` on its own can pin the last one. It keeps the
   latest one in memory and doesn't store or send it anywhere. Slash commands and messages from other tools are skipped.
+- **What it asks.** At the start of a new session, if your last session left pins, one question (Claude Code's own
+  question box) asking whether to keep them. Nothing is asked when there's nothing to carry over, when you resume a
+  session, or in a `claude -p` run.
 - **What it stores.** Your pins, in Claude Code's plugin storage, keyed by session id so a resumed session gets them
-  back. It keeps the last 50 sessions with pins and deletes older ones. Unpinning everything deletes that session's
-  entry.
+  back, plus one copy of the latest pins so the next session can offer them. It keeps the last 50 sessions with pins
+  and deletes older ones. Unpinning everything deletes that session's entry and the copy; "Unpin them" deletes the
+  copy.
 - It doesn't run commands, call tools, change your prompts or send anything outside Claude Code.
 
 ## Licence

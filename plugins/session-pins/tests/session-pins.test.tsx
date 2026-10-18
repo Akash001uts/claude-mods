@@ -2,19 +2,31 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 
-import { fit, parts } from '../hooks/register'
+import { KEEP, UNPIN, fit, parts } from '../hooks/register'
 
 const BAND = {
   component: 'AbovePrompt' as const,
   props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 80, scroll: { offset: 0, bodyRows: 12 }, view: {} },
 }
 
+// What the person answers when asked about the last session's pins; null dismisses the question.
+type Asking = { answer: string | null; questions: string[]; id: string }
+
 // Stands in for the engine beneath the plugin.
-function engine(on: On, id = 's1', saved: Record<string, unknown> = {}) {
+function engine(on: On, id = 's1', saved: Record<string, unknown> = {}, asking: Asking = { answer: KEEP, questions: [], id }) {
+  asking.id = id
   mock.clock(on)
   mock.store(on, saved)
-  on('session.id', () => ({ value: id }))
+  on('session.id', () => ({ value: asking.id }))
+  on('tool.call', { tool: 'AskUserQuestion' }, ($, e) => {
+    const question = e.questions[0]!.question
+    asking.questions.push(question)
+    if (asking.answer === null) return { deny: 'The user dismissed the question.' }
+    return { result: { questions: e.questions, answers: { [question]: asking.answer } } }
+  })
   on('command.register', ($, e) => ({ value: { command: e.name } }))
+  on('ui.log', () => ({ value: undefined }))
+  on('classic.SessionStart', () => ({}))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('prompt.submit', ($, e) => ({ text: e.text, context: e.context }))
   on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'You are Claude.', scope: 'shared' as const }] }))
@@ -25,7 +37,15 @@ function engine(on: On, id = 's1', saved: Record<string, unknown> = {}) {
   })
 }
 
-const start = ($: Engine) => $.session.start({ cwd: 'C:/proj', surface: 'terminal', isInteractive: true })
+// Waits for what session.start leaves running (the question about the last session's pins).
+declare const setTimeout: (done: () => void, ms: number) => unknown
+const settle = async () => {
+  for (let i = 0; i < 20; i++) await new Promise<void>(done => setTimeout(done, 0))
+}
+const start = async ($: Engine) => {
+  await $.session.start({ cwd: 'C:/proj', surface: 'terminal', isInteractive: true })
+  await settle()
+}
 const run = ($: Engine, command: string, args = '') =>
   $.command.run({ command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 const COMPOSE = { model: 'test', promptModel: 'test', surfaces: ['terminal' as const], tools: [], outputStyle: null, traits: [] }
@@ -189,4 +209,93 @@ test('a cut-off pin opens out when pressed, and folds back', async ($, on) => {
     await ui.press({ key: 'less-1' })
     await ui.unmount()
   }
+})
+
+const BOTH = '1. Use Australian spelling\n2. Branch is pins-carry'
+
+const LAST_SESSION = {
+  'session:old': { pins: [{ text: 'Use Australian spelling', pinnedAt: 0 }, { text: 'Branch is pins-carry', pinnedAt: 0 }], savedAt: 0 },
+  last: { pins: [{ text: 'Use Australian spelling', pinnedAt: 0 }, { text: 'Branch is pins-carry', pinnedAt: 0 }], savedAt: 0, sessionId: 'old' },
+}
+
+test("a new session is asked about the last session's pins, and keeps them", async ($, on) => {
+  const asking: Asking = { answer: KEEP, questions: [], id: '' }
+  engine(on, 'new', { ...LAST_SESSION }, asking)
+  await start($)
+  expect(asking.questions).toHaveLength(1)
+  expect(asking.questions[0]).toMatch(/Keep the 2 pins from your last session\? 1\. Use Australian spelling; 2\. Branch is pins-carry/)
+  expect((await run($, 'pin', 'list')).text).toBe(BOTH)
+  expect(await pinsSection($)).toMatch(/2\. Branch is pins-carry/)
+
+  // A reload starts the session again: it has its own pins now, so no second question.
+  await start($)
+  expect(asking.questions).toHaveLength(1)
+
+  // They keep following into the session after that, until unpinned.
+  asking.id = 'newer'
+  await start($)
+  expect(asking.questions).toHaveLength(2)
+  expect((await run($, 'pin', 'list')).text).toBe(BOTH)
+  await run($, 'unpin', 'all')
+  asking.id = 'newest'
+  await start($)
+  expect(asking.questions).toHaveLength(2)
+  expect((await run($, 'pin', 'list')).text).toMatch(/Nothing pinned/)
+})
+
+test("unpinning them leaves them behind, and the next session isn't asked again", async ($, on) => {
+  const asking: Asking = { answer: UNPIN, questions: [], id: '' }
+  engine(on, 'new', { ...LAST_SESSION }, asking)
+  await start($)
+  expect(asking.questions).toHaveLength(1)
+  expect((await run($, 'pin', 'list')).text).toMatch(/Nothing pinned/)
+  await start($)
+  asking.id = 'newer'
+  await start($)
+  expect(asking.questions).toHaveLength(1)
+  // The old session still has them if it's resumed.
+  asking.id = 'old'
+  await start($)
+  expect((await run($, 'pin', 'list')).text).toBe(BOTH)
+  expect(asking.questions).toHaveLength(1)
+})
+
+test('/clear asks about the pins it leaves behind', async ($, on) => {
+  const asking: Asking = { answer: KEEP, questions: [], id: '' }
+  engine(on, 'before', {}, asking)
+  await start($)
+  await run($, 'pin', 'Use Australian spelling')
+  asking.id = 'after'
+  await $.classic.SessionStart({ source: 'clear' })
+  await settle()
+  expect(asking.questions).toEqual([expect.stringMatching(/Keep the pin from your last session\? 1\. Use Australian spelling/)])
+  expect((await run($, 'pin', 'list')).text).toBe('1. Use Australian spelling')
+
+  // Unpinning them instead leaves the cleared session with none.
+  asking.answer = UNPIN
+  asking.id = 'after that'
+  await $.classic.SessionStart({ source: 'clear' })
+  await settle()
+  expect(asking.questions).toHaveLength(2)
+  expect((await run($, 'pin', 'list')).text).toMatch(/Nothing pinned/)
+})
+
+test('dismissing the question keeps the pins', async ($, on) => {
+  const asking: Asking = { answer: null, questions: [], id: '' }
+  engine(on, 'new', { ...LAST_SESSION }, asking)
+  await start($)
+  expect(asking.questions).toHaveLength(1)
+  expect((await run($, 'pin', 'list')).text).toBe(BOTH)
+})
+
+test('nobody is asked under -p, and a resumed session just gets its own pins', async ($, on) => {
+  const asking: Asking = { answer: KEEP, questions: [], id: '' }
+  engine(on, 'new', { ...LAST_SESSION, 'session:mine': { pins: [{ text: 'mine', pinnedAt: 0 }], savedAt: 1 } }, asking)
+  await $.session.start({ cwd: 'C:/proj', surface: null, isInteractive: false })
+  await settle()
+  expect((await run($, 'pin', 'list')).text).toMatch(/Nothing pinned/)
+  asking.id = 'mine'
+  await start($)
+  expect((await run($, 'pin', 'list')).text).toBe('1. mine')
+  expect(asking.questions).toHaveLength(0)
 })

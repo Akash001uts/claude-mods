@@ -8,6 +8,8 @@ declare module 'claude-code' {
       isHidden: boolean
       // The pin opened out to full length (its text, which no other pin shares), or null.
       expanded: string | null
+      // The session already asked about the last session's pins, so a reload doesn't ask again.
+      offeredTo: string | null
     }
   }
 }

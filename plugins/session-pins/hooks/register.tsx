@@ -14,9 +14,16 @@ const MAX_SESSIONS = 50
 const pins = atom({ plugin: 'session-pins', key: 'pins' } as const, [])
 const isHidden = atom({ plugin: 'session-pins', key: 'isHidden' } as const, false)
 const expanded = atom({ plugin: 'session-pins', key: 'expanded' } as const, null)
+const offeredTo = atom({ plugin: 'session-pins', key: 'offeredTo' } as const, null)
 
 type Saved = { pins: Pin[]; savedAt: number }
 const sessionKey = (id: string) => `session:${id}`
+// The pins as the last session to change them left them, offered to the next new session. Gone once unpinned.
+const LAST = 'last'
+type Last = Saved & { sessionId: string }
+
+export const KEEP = 'Keep them'
+export const UNPIN = 'Unpin them'
 
 // The person's last prompt typed at the prompt box, for /pin with nothing after it.
 let lastPrompt = ''
@@ -74,17 +81,61 @@ export const section = (list: readonly Pin[]) =>
 
 async function save($: EngineInterface, list: Pin[]) {
   await update($, pins, () => list)
-  const key = sessionKey(await $.session.id())
-  if (list.length === 0) return $.store.delete(key)
-  const saved: Saved = { pins: list, savedAt: await $.clock.now() }
-  await $.store.set(key, saved)
-  const keys = (await $.store.keys()).filter(k => k.startsWith('session:'))
-  for (const old of keys.slice(0, Math.max(0, keys.length - MAX_SESSIONS))) await $.store.delete(old)
+  const sessionId = await $.session.id()
+  const key = sessionKey(sessionId)
+  if (list.length === 0) {
+    await $.store.delete(key)
+    // Unpinned here, so the next session isn't offered them.
+    const last = (await $.store.get(LAST)) as Last | undefined
+    if (last?.sessionId === sessionId) await $.store.delete(LAST)
+    return
+  }
+  const savedAt = await $.clock.now()
+  await $.store.set(key, { pins: list, savedAt } satisfies Saved)
+  await $.store.set(LAST, { pins: list, savedAt, sessionId } satisfies Last)
+  // Oldest first, so the ones dropped past MAX_SESSIONS are the least recent.
+  const sessions = (await $.store.keys()).filter(k => k.startsWith('session:'))
+  if (sessions.length <= MAX_SESSIONS) return
+  const dated = await Promise.all(sessions.map(async k => ({ k, at: ((await $.store.get(k)) as Saved | undefined)?.savedAt ?? 0 })))
+  dated.sort((a, b) => a.at - b.at)
+  for (const { k } of dated.slice(0, dated.length - MAX_SESSIONS)) await $.store.delete(k)
 }
 
+// A resumed session (or a reload) reads its own pins back. Returns whether it had any.
 async function load($: EngineInterface) {
   const saved = (await $.store.get(sessionKey(await $.session.id()))) as Saved | undefined
   await update($, pins, () => saved?.pins ?? [])
+  return (saved?.pins.length ?? 0) > 0
+}
+
+const preview = (all: readonly Pin[]) => all.map((p, i) => `${i + 1}. ${cut(oneLine(p.text), 60)}`).join('; ')
+
+// A new session with nothing pinned asks, once, whether to carry over the pins the last session left.
+async function offer($: EngineInterface) {
+  const sessionId = await $.session.id()
+  if ((await read($, offeredTo)) === sessionId) return
+  const last = (await $.store.get(LAST)) as Last | undefined
+  if (!last || last.sessionId === sessionId || last.pins.length === 0) return
+  if ((await read($, pins)).length > 0) return
+  await update($, offeredTo, () => sessionId)
+  const n = last.pins.length
+  const answer = await $.ui
+    .ask(`Keep the ${n === 1 ? 'pin' : `${n} pins`} from your last session? ${preview(last.pins)}`, {
+      header: 'Pins',
+      options: [KEEP, UNPIN],
+    })
+    .catch(() => KEEP)
+  if (answer === UNPIN) {
+    // Declined: don't offer them again. The old session keeps its own copy, so resuming it still brings them back.
+    await $.store.delete(LAST)
+    return
+  }
+  // Pinned something in the meantime: put the old ones first, without doubles.
+  const now = await read($, pins)
+  const merged = [...last.pins, ...now.filter(p => !last.pins.some(o => o.text === p.text))].slice(0, MAX_PINS)
+  await save($, merged)
+  await update($, isHidden, () => false)
+  $.ui.log(`Kept ${n === 1 ? '1 pin' : `${n} pins`} from your last session. /unpin all clears them.`)
 }
 
 const list = (all: readonly Pin[]) =>
@@ -114,6 +165,13 @@ async function remove($: EngineInterface, arg: string) {
   return `Unpinned #${n}: ${oneLine(now[n - 1]!.text).slice(0, 80)}`
 }
 
+// Reads the session's own pins (a resume, a reload); a session with none is offered the last session's.
+// Not awaited by the caller, so the question never holds anything up.
+async function begin($: EngineInterface) {
+  const hasOwn = await load($).catch(() => false)
+  if (!hasOwn) await offer($)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -126,9 +184,18 @@ export const register: Register = on => {
       description: 'Unpin a note: /unpin 2, /unpin all; on its own unpins the latest',
       argumentHint: '[<number> | all]',
     })
-    // A new or resumed session reads its own pins; a hot reload reads back the same ones.
-    await load($).catch(() => {})
-    return next(e)
+    const started = await next(e)
+    // Nobody to ask under -p.
+    if (e.isInteractive) void begin($).catch(() => {})
+    else await load($).catch(() => {})
+    return started
+  })
+
+  // /clear starts a new session without session.start, so it's caught here.
+  on('classic.SessionStart', async ($, e, next) => {
+    const result = await next(e)
+    if (e.source === 'clear') void begin($).catch(() => {})
+    return result
   })
 
   on('prompt.submit', async ($, e, next) => {
