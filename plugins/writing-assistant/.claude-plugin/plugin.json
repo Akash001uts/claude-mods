@@ -1,5 +1,5 @@
 {
-  "name": "voice",
+  "name": "writing-assistant",
   "version": "0.2.0",
   "description": "Drafts and edits messages in your own voice. A one-time setup learns how you write from the sources you tick (Gmail, Slack, LinkedIn posts, assignments), then plain requests like \"reply to this recruiter\" come out sounding like you",
   "author": {

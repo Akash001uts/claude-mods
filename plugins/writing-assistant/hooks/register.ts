@@ -1,6 +1,6 @@
 import type { EngineInterface, Register } from 'claude-code'
 
-const PLUGIN = 'voice'
+const PLUGIN = 'writing-assistant'
 // true (0.1.x) or 'done' once the person answered or closed the list; a session id while it's out in that session.
 const OFFERED = 'setupOffered'
 const MAX_PROFILE = 8000
@@ -19,7 +19,7 @@ export const SOURCES = [
 const shortName = (label: string) => label.replace(/\s*\(.*\)$/, '')
 
 export const SKIPPED = 'Voice setup skipped. /voice setup brings it back.'
-export const TRIMMED = 'voice: your profile is over 8k characters, so Claude gets the summaries and reads the file for the rest.'
+export const TRIMMED = 'writing-assistant: your profile is over 8k characters, so Claude gets the summaries and reads the file for the rest.'
 
 let profile = ''
 let profilePath = ''
@@ -29,7 +29,7 @@ let trimNoted = false
 
 async function findProfilePath($: EngineInterface) {
   const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
-  return home ? `${home.replace(/\\/g, '/')}/.claude/voice/profile.md` : ''
+  return home ? `${home.replace(/\\/g, '/')}/.claude/writing-assistant/profile.md` : ''
 }
 
 // Cheap enough to run before every request: one stat, and a read only when the file changed.
@@ -132,7 +132,7 @@ async function askSources($: EngineInterface) {
   }
   const text = [
     `Set up my voice profile from: ${names.join(', ')}.`,
-    `Use the ${PLUGIN}:setup skill. Profile file: ${profilePath || '~/.claude/voice/profile.md'}`,
+    `Use the ${PLUGIN}:setup skill. Profile file: ${profilePath || '~/.claude/writing-assistant/profile.md'}`,
   ].join(' ')
   // From a timer: a submit from inside a command.run hook would wait on the turn that hook holds.
   $.clock.after(0, () => {
