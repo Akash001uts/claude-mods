@@ -1,0 +1,9 @@
+{
+  "name": "assessment-marker",
+  "version": "0.1.0",
+  "description": "Marks your uni assessments against the real rubric with High Distinction as the bar: a strict nine-section review, re-marks that catch regressions, a check before you submit, and it learns what each subject's marker cares about",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}
