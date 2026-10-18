@@ -6,3 +6,4 @@ node_modules/
 _context/
 _archive/
 .claude/
+plugins/*/evals/
