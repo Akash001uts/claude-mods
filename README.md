@@ -11,6 +11,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | [context-handoff](plugins/context-handoff) | Hands a long session off cleanly before it compacts | In review for the directory |
 | [session-pins](plugins/session-pins) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
 | [writing-assistant](plugins/writing-assistant) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
+| [assessment-marker](plugins/assessment-marker) | Marks your uni assessments against the real rubric, with HD as the bar | New, not submitted yet |
 
 ## Install
 
@@ -20,6 +21,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin install context-handoff@akash-mods
 /plugin install session-pins@akash-mods
 /plugin install writing-assistant@akash-mods
+/plugin install assessment-marker@akash-mods
 ```
 
 You can install just the ones you want. You need a recent Claude Code build that supports mods
@@ -120,15 +122,30 @@ draft is already close, and when I correct something ("remember I never say X") 
 - It only reads the sources you tick, through your own connectors, and keeps a short description plus a few short
   excerpts, not your messages.
 
+## assessment-marker
+
+Marks my uni assessments before I submit them, strictly against the real rubric, with High Distinction as the bar
+every time. You set each subject up once (it walks you through adding course content, notes, past assignments and
+feedback), then just ask "grade it now", "check it again" or "am I ready to submit?".
+
+**Why it's useful:** I was pasting the same long marking prompt into every chat and re-explaining the rubric. Now the
+first review already reads the rubric properly, runs and checks everything, and tells me the smallest fixes that
+move a band. When marks come back it learns what that marker cares about.
+
+- It never edits your work while marking, and every subject is kept separate.
+- `/mark` is optional (`/mark ready`, `/mark setup`, `/mark save`); plain requests work.
+- Everything it keeps goes in each subject's own folder, under `.assessment-marker/`.
+
 ## What they run and store
 
 None of them send anything outside Claude Code (writing-assistant reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
 context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, session-pins adds your pins to
-the system prompt and saves them in plugin storage, and writing-assistant adds your profile to the system prompt. Each plugin's own README has
+the system prompt and saves them in plugin storage, writing-assistant adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [context-handoff](plugins/context-handoff/README.md#what-it-runs-and-stores),
 [session-pins](plugins/session-pins/README.md#what-it-runs-and-stores),
-[writing-assistant](plugins/writing-assistant/README.md#what-it-runs-and-stores).
+[writing-assistant](plugins/writing-assistant/README.md#what-it-runs-and-stores),
+[assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores).
 
 ## Notes
 

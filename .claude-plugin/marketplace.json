@@ -30,6 +30,12 @@
       "source": "./plugins/writing-assistant",
       "description": "Drafts and edits messages in your own voice. A one-time setup learns how you write from the sources you tick (Gmail, Slack, LinkedIn posts, assignments), then plain requests like \"reply to this recruiter\" come out sounding like you",
       "version": "0.2.0"
+    },
+    {
+      "name": "assessment-marker",
+      "source": "./plugins/assessment-marker",
+      "description": "Marks your uni assessments against the real rubric with High Distinction as the bar: a strict nine-section review, re-marks that catch regressions, a check before you submit, and it learns what each subject's marker cares about",
+      "version": "0.1.0"
     }
   ]
 }
