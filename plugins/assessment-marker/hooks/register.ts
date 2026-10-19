@@ -18,8 +18,8 @@ export const SAVE_OPTIONS = ['In each subject folder (outputs/_audits)', 'Chat o
 export const DEFAULT_SAVE = 'outputs/_audits'
 export const CHAT_ONLY = 'chat'
 export const SAVE_NOTE = (saveTo: string) =>
-  `assessment-marker: reviews ${saveTo === CHAT_ONLY ? 'stay in the chat' : `are saved to ${saveTo}`}. Ask for a review in plain words ("grade it now", "am I ready to submit?"); /mark save changes this.`
-export const USAGE = 'Usage: /mark [ready | setup | save]'
+  `assessment-marker: reviews ${saveTo === CHAT_ONLY ? 'stay in the chat' : `are saved to ${saveTo}`}. Ask for a review in plain words ("grade it now", "am I ready to submit?"); say "just show it here" or "save this one as X" on any review to override it.`
+export const USAGE = 'Usage: /mark [ready | setup]'
 
 type Subject = { name: string; path: string }
 
@@ -96,7 +96,7 @@ export function parseSave(answer: string) {
   return text.slice(0, 200)
 }
 
-// Dismissed: the default folder stands, and the note says how to change it.
+// Dismissed: the default folder stands.
 async function askSave($: EngineInterface) {
   const answer = await $.ui.ask(SAVE_QUESTION, { header: 'Reviews', options: [...SAVE_OPTIONS] }).catch(() => '')
   const choice = parseSave(answer)
@@ -150,8 +150,8 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'mark',
-      description: 'Mark an assessment against its rubric (HD bar). /mark ready checks it before you submit; /mark setup adds a subject; /mark save changes where reviews go',
-      argumentHint: '[ready | setup | save]',
+      description: 'Mark an assessment against its rubric (HD bar). /mark ready checks it before you submit; /mark setup adds a subject',
+      argumentHint: '[ready | setup]',
     })
     const started = await next(e)
     cwd = e.cwd
@@ -170,10 +170,6 @@ export const register: Register = on => {
 
   on('command.run', { command: 'mark' }, async ($, e) => {
     const arg = e.args.trim().toLowerCase()
-    if (arg === 'save') {
-      $.clock.after(0, () => void askSave($).catch(() => {}))
-      return { text: 'Pick where reviews go.' }
-    }
     if (arg !== '' && arg !== 'ready' && arg !== 'setup') return { text: USAGE }
     const text = markPrompt(arg)
     // From a timer: a submit from inside a command.run hook would wait on the turn that hook holds.

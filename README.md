@@ -133,7 +133,7 @@ first review already reads the rubric properly, runs and checks everything, and 
 move a band. When marks come back it learns what that marker cares about.
 
 - It never edits your work while marking, and every subject is kept separate.
-- `/mark` is optional (`/mark ready`, `/mark setup`, `/mark save`); plain requests work.
+- `/mark` is optional (`/mark ready`, `/mark setup`); plain requests work.
 - Everything it keeps goes in each subject's own folder, under `.assessment-marker/`.
 
 ## What they run and store

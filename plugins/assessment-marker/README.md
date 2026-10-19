@@ -11,8 +11,8 @@ is close. It's strict on purpose: the point is to find the problems before the r
 ## How it works
 
 - **First run:** one question, where to keep your reviews: a folder in each subject (`outputs/_audits`), chat only,
-  or a folder or file name you type in. `/mark save` changes it later, and you can override it for any single
-  review ("just show it here this time").
+  or a folder or file name you type in. You can override it for any single review ("just show it here this
+  time").
 - **Set up each subject once.** Say "set up this subject" (or `/mark setup`). You tick what you can add, then it walks
   you through each one: where to get it (like downloading your Canvas files), what formats are fine, and where it
   goes. The list is course content, the subject outline, your own notes, notes from others, past assignments with
@@ -41,14 +41,14 @@ is close. It's strict on purpose: the point is to find the problems before the r
   It can also tell you if a mark looks fair and, if you want, help write a polite email asking about it.
 - **Second opinion:** it can write a self-contained prompt for another model or chat to mark the same work
   independently, then compare the two reviews when you paste the other one back.
-- `/mark` is there if you want to run it on purpose: `/mark`, `/mark ready`, `/mark setup`, `/mark save`. You never
-  have to use it.
+- `/mark` is there if you want to run it on purpose: `/mark`, `/mark ready`, `/mark setup`. You never have to use
+  it.
 
 ## What it runs and stores
 
 - **What it asks.** In the first session after install (not under `claude -p`), one question in Claude Code's own
   question box: where to keep reviews. It only asks on its own until you answer or close it (closing keeps the
-  default folder). `/mark save` asks again.
+  default folder).
 - **What it sends to Claude.** `/mark`, `/mark ready` and `/mark setup` each submit one short prompt asking Claude
   to run the matching skill. The prompt only has that request and the skill's name. Nothing is submitted unless you
   run one of them.

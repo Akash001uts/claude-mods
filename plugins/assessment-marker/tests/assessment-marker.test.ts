@@ -161,11 +161,10 @@ test('/mark routes each stage to its skill', async ($, on) => {
   expect(seen.submitted[2]).toMatch(/assessment-marker:setup skill/)
 })
 
-test('/mark save asks again and anything else shows the usage line', async ($, on) => {
-  const seen = engine(on, { answer: 'my-reviews', saved: { firstRun: 'done' } })
+test('anything other than ready or setup shows the usage line', async ($, on) => {
+  const seen = engine(on, { answer: null, saved: { firstRun: 'done' } })
   await start($)
-  await run($, 'save')
-  expect(seen.store.saveTo).toBe('my-reviews')
+  expect((await run($, 'save')).text).toBe(USAGE)
   expect((await run($, 'now please')).text).toBe(USAGE)
   expect(seen.submitted).toEqual([])
 })
