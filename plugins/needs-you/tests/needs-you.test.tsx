@@ -61,7 +61,7 @@ function engine(on: On, settings: Record<string, unknown> = {}, hasSlack = true)
   })
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
   on('turn.complete', ($, e) => ({ text: e.answer }))
-  on('tool.check', ($, e) => ({ decision: e.tool === 'Bash' ? ('ask' as const) : ('allow' as const) }))
+  on('classic.PermissionRequest', () => ({}))
   on('tool.call', { tool: 'PushNotification' }, ($, e) => {
     w.pushes.push(e.message)
     return { result: {}, text: 'sent' }
@@ -134,23 +134,25 @@ test('only your own Slack user is listened to', async ($, on) => {
   expect(w.submitted).toEqual([])
 })
 
-test('a permission reply of yes stops the turn, tells Claude, and allows that call once', async ($, on) => {
+test('a permission prompt pings; yes is left to the machine, no stops the turn and tells Claude', async ($, on) => {
   const w = engine(on)
   await start($)
   await $.turn.start({ turnId: 't9', text: 'test it' })
-  const verdict = await $.tool.check({ tool: 'Bash', input: { command: 'npm test' }, tool_use_id: 'c1', approver: 'person' })
-  expect(verdict.decision).toBe('ask')
+  await $.classic.PermissionRequest({ tool_name: 'Bash', tool_input: { command: 'npm test' }, session_id: 's1', transcript_path: 'C:/t.jsonl', cwd: 'C:/x' })
   await wait(w, 5)
-  expect(w.sent[0]?.text).toBe('Hey Akash, help-drafting-email is asking permission to run `npm test`. Reply yes or no.')
+  expect(w.sent[0]?.text).toBe('Hey Akash, help-drafting-email is asking permission to run `npm test`. Approve it on your machine, or reply no here to stop it.')
   w.threads[w.sent[0]!.ts] = [{ ts: '800.000', text: 'maybe', user: ME }]
   await wait(w, 0)
-  expect(w.sent[1]?.text).toBe('Reply yes or no.')
+  expect(w.sent[1]?.text).toBe('Reply no to stop it, or approve it on your machine.')
   w.threads[w.sent[0]!.ts]!.push({ ts: '801.000', text: 'yes', user: ME })
   await wait(w, 0)
+  expect(w.sent[2]?.text).toContain('"Bash(npm test)"')
+  expect(w.aborted).toEqual([])
+  expect(w.submitted).toEqual([])
+  w.threads[w.sent[0]!.ts]!.push({ ts: '802.000', text: 'no', user: ME })
+  await wait(w, 0)
   expect(w.aborted).toEqual(['t9'])
-  expect(w.submitted[0]?.text).toContain('approved `npm test` from Slack')
-  expect((await $.tool.check({ tool: 'Bash', input: { command: 'npm test', description: 'Run the tests again' }, tool_use_id: 'c2', approver: 'person' })).decision).toBe('allow')
-  expect((await $.tool.check({ tool: 'Bash', input: { command: 'npm test' }, tool_use_id: 'c3', approver: 'person' })).decision).toBe('ask')
+  expect(w.submitted[0]?.text).toContain('denied `npm test` from Slack')
 })
 
 test('a plain message in the DM goes to the waiting session, which says so', async ($, on) => {

@@ -104,7 +104,7 @@ export const pingText = {
   turn: (name: string, session: string, reply: string) =>
     `Hey ${name}, ${session} has returned a reply:\n\n${cut(reply)}\n\nReturn to your machine to continue, or reply here with your follow-up.`,
   permission: (name: string, session: string, what: string) =>
-    `Hey ${name}, ${session} is asking permission to run \`${what.slice(0, 500)}\`. Reply yes or no.`,
+    `Hey ${name}, ${session} is asking permission to run \`${what.slice(0, 500)}\`. Approve it on your machine, or reply no here to stop it.`,
   question: (name: string, session: string, qs: readonly Question[]) =>
     `Hey ${name}, ${session} has a question for you:\n\n${qs
       .map(q => `${q.question}${q.options?.length ? `\n${q.options.map((o, i) => `${i + 1}. ${o.label}`).join('\n')}` : ''}`)

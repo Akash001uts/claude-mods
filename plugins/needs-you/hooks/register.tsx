@@ -19,12 +19,10 @@ type Wait = { id: string; kind: Kind; since: number; text: string; tool?: string
 // goes to the most recent session still waiting.
 type Ping = { sessionId: string; at: number; session: string }
 
-// This session's waits, by tool_use_id ('turn' for a finished turn).
+// This session's waits: a question by tool_use_id, a permission prompt by permKey, 'turn' for a finished turn.
 const waits = new Map<string, Wait>()
 let turnId: string | undefined
-// The call the person allowed from Slack, allowed once when Claude runs it again.
-let allowOnce: string | undefined
-// Calls that raised a permission prompt, by tool_use_id, with the allow rule they'd need.
+// Calls that raised a permission prompt, by permKey, with the allow rule they'd need.
 const asked = new Map<string, string>()
 let slack: { server: string } | null | undefined
 let me: { id: string; name: string; channel?: string } | undefined
@@ -35,11 +33,6 @@ let hasTimer = false
 
 const get = async ($: EngineInterface) => ({ ...DEFAULTS, ...((await $.store.get('settings')) as Partial<Settings> | undefined) })
 const put = async ($: EngineInterface, s: Settings) => $.store.set('settings', s)
-// The call a Slack "yes" allows once. For the shell, the command alone: a rerun's description and timeout often differ.
-const keyOf = (tool: string, input: unknown) => {
-  const command = (input as { command?: unknown } | undefined)?.command
-  return `${tool}\n${(tool === 'Bash' || tool === 'PowerShell') && typeof command === 'string' ? command : JSON.stringify(input)}`
-}
 export const ruleOf = (tool: string, input: unknown) => {
   const command = (input as { command?: unknown } | undefined)?.command
   return (tool === 'Bash' || tool === 'PowerShell') && typeof command === 'string' ? `${tool}(${command})` : tool
@@ -49,6 +42,8 @@ const describe = (tool: string, input: unknown) => {
   const main = i.command ?? i.file_path ?? i.url ?? i.pattern
   return typeof main === 'string' ? (tool === 'Bash' || tool === 'PowerShell' ? main : `${tool} ${main}`) : tool
 }
+// A permission prompt's wait, matched to its call by the tool and what it runs or touches (the prompt has no call id).
+const permKey = (tool: string, input: unknown) => `permission:${describe(tool, input)}`
 
 // The Slack connector's server, found by its send tool; null when it isn't connected.
 async function findSlack($: EngineInterface) {
@@ -151,20 +146,22 @@ export async function answer($: EngineInterface, w: Wait, reply: string) {
   }
   if (w.kind === 'permission') {
     const yes = isYes(text)
-    if (!yes && !isNo(text)) {
-      if (w.pingTs) await send($, 'Reply yes or no.', w.pingTs)
+    // A mod never approves a permission: only you can, on your machine. A no stops the turn (closing the box) and
+    // tells Claude.
+    if (yes) {
+      if (w.pingTs)
+        await send($, `needs-you can't approve permissions for you, so approve it on your machine. To stop being asked for this one, add "${ruleOf(w.tool!, w.input)}" to "permissions.allow" in ~/.claude/settings.json.`, w.pingTs)
+      return
+    }
+    if (!isNo(text)) {
+      if (w.pingTs) await send($, 'Reply no to stop it, or approve it on your machine.', w.pingTs)
       return
     }
     w.byPhone = true
-    if (yes) allowOnce = keyOf(w.tool!, w.input)
     await close($, w)
-    // Claude Code's own permission box can't be answered by a mod, so the turn stops (closing the box) and Claude is
-    // told the answer, with that one call allowed when it runs it again.
     await abort($)
     await $.prompt.submit({
-      text: yes
-        ? `needs-you: The user approved \`${w.text}\` from Slack. Run it again now.`
-        : `needs-you: The user denied \`${w.text}\` from Slack. Don't run it. Carry on another way, or stop and say what you need.`,
+      text: `needs-you: The user denied \`${w.text}\` from Slack. Don't run it. Carry on another way, or stop and say what you need.`,
     })
     return
   }
@@ -323,21 +320,19 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // A permission prompt: Claude Code shows its own box; the wait starts. A call allowed from Slack is allowed once
-  // when Claude runs it again.
-  on('tool.check', async ($, e, next) => {
-    const verdict = await next(e)
-    if (verdict.decision !== 'ask' || e.approver !== 'person' || e.agentId || e.tool === 'AskUserQuestion') return verdict
-    if (allowOnce && allowOnce === keyOf(e.tool, e.input)) {
-      allowOnce = undefined
-      return { decision: 'allow', reason: 'Allowed from Slack by the user (needs-you).' }
-    }
-    if (!e.tool_use_id) return verdict
-    const s = await get($)
-    if (s.counter) asked.set(e.tool_use_id, ruleOf(e.tool, e.input))
-    if (s.permissions)
-      waits.set(e.tool_use_id, { id: e.tool_use_id, kind: 'permission', since: await $.clock.now(), text: describe(e.tool, e.input), tool: e.tool, input: e.input })
-    return verdict
+  // A permission prompt: Claude Code shows its own box and the wait starts. The request is passed on unchanged; you
+  // decide it on your machine.
+  on('classic.PermissionRequest', async ($, e, next) => {
+    try {
+      if (!e.agent_id && e.tool_name !== 'AskUserQuestion') {
+        const id = permKey(e.tool_name, e.tool_input)
+        const s = await get($)
+        if (s.counter) asked.set(id, ruleOf(e.tool_name, e.tool_input))
+        if (s.permissions)
+          waits.set(id, { id, kind: 'permission', since: await $.clock.now(), text: describe(e.tool_name, e.tool_input), tool: e.tool_name, input: e.tool_input })
+      }
+    } catch {}
+    return next(e)
   })
 
   // A question waits while its box is up. Any call's end closes its wait; an approved prompt counts toward an allow
@@ -351,10 +346,12 @@ export const register: Register = on => {
     const result = await next(e)
     // A slip in the waits or the counter never costs Claude the result.
     try {
+      const key = permKey(String(e.tool), e)
       await close($, waits.get(id))
-      const rule = asked.get(id)
+      await close($, waits.get(key))
+      const rule = asked.get(key)
       if (rule) {
-        asked.delete(id)
+        asked.delete(key)
         if (result.deny === undefined) {
           const counts = ((await $.store.get('counts')) as Record<string, number> | undefined) ?? {}
           counts[rule] = (counts[rule] ?? 0) + 1

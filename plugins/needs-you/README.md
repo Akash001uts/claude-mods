@@ -25,7 +25,8 @@ session. No bot, no tokens of your own.
   different sessions don't get mixed up:
   - "Hey Sam, help-drafting-email has returned a reply:" then Claude's reply, then "Return to your machine to
     continue, or reply here with your follow-up."
-  - "Hey Sam, help-drafting-email is asking permission to run `npm test`. Reply yes or no."
+  - "Hey Sam, help-drafting-email is asking permission to run `npm test`. Approve it on your machine, or reply no
+    here to stop it."
   - "Hey Sam, help-drafting-email has a question for you:" then the question and numbered options.
   The name comes from your Slack profile; the session is the project folder's name. Replies over 3,000 characters
   are cut with "full reply on your machine". The DM has Claude's actual reply in it, so it can contain code or file
@@ -34,9 +35,9 @@ session. No bot, no tokens of your own.
   - A reply in a ping's thread goes to that ping's session. A plain message in the DM goes to the most recent session
     still waiting, and the mod replies "→ <session>" so you know where it went.
   - Finished turn: your reply goes in as your next message.
-  - Permission: "yes" or "no" (anything else gets "Reply yes or no"). Claude Code's own permission box can't be
-    answered by a mod, so the mod stops the turn (which closes the box) and tells Claude what you said; on a yes, that
-    exact call is allowed once when Claude runs it again.
+  - Permission: only you can approve a permission, on your machine. The mod never approves anything. Reply "no" and
+    it stops the turn (which closes the box) and tells Claude you said no. Reply "yes" and it answers in Slack that
+    you need to approve it on your machine, with the allow rule that would stop the prompt for that command.
   - Question: a number or an option's name picks it; anything else goes in as your own answer. The turn is stopped
     the same way and Claude gets your answer.
   - Only messages from your own Slack user in that DM count. Anything else is ignored, because a reply runs on your
@@ -62,10 +63,26 @@ session. No bot, no tokens of your own.
 - **What it sends.** The ping's text (your first name, the session's folder name, what Claude is waiting on, and
   Claude's reply or question) to your own Slack DM through the claude.ai Slack connector, only after the wait. Without
   Slack, a short push through Claude Code's PushNotification tool.
-- **What it puts into the session.** Your Slack replies: as your next message after a finished turn, or as a note to
-  Claude ("needs-you: The user approved `npm test` from Slack...") after a permission prompt or question, together
-  with stopping the turn that was waiting.
-- **What it allows.** Only the one call you said yes to from Slack, once, when Claude runs it again.
+- **What it sends and where.** It reads the conversation (what Claude is waiting on) and sends it out in one way only:
+  the Slack connector's `slack_send_message` tool, to your own Slack DM, after the wait. Nothing goes anywhere else.
+- **Which tools it calls itself, and when.** It calls these tools itself, without the model asking:
+  - The Slack connector's tools, found by name in your connected tools: `slack_read_user_profile` once (your user id
+    and first name), `slack_send_message` for each ping and its short replies ("→ <session>", "Already answered on
+    your machine", the approve-on-your-machine note), and `slack_read_thread` / `slack_read_channel` every 10 seconds
+    while a ping is waiting, to read your replies.
+  - `PushNotification`, only without Slack, once per ping.
+  - Nothing else: it runs no commands and fetches nothing from the network itself. Every call goes through the
+    connector, which only talks to Slack.
+- **What it puts in the prompts it submits.** Only after you reply in Slack:
+  - Finished turn: your reply, word for word, as your next message.
+  - Permission, on a "no": "needs-you: The user denied `<command>` from Slack. Don't run it. Carry on another way, or
+    stop and say what you need."
+  - Question: "needs-you: The user answered your question from Slack, picking "<option>": <your reply>".
+  Each one only after stopping the turn that was waiting (for a permission or a question). Nothing else goes in.
+- **Credentials.** It reads none. Slack goes through your claude.ai Slack connector, which Claude Code signs in to;
+  the mod never sees a token, password or key.
+- **What it decides.** Nothing. It never approves or denies a permission: its permission hook only notes that a prompt
+  is showing and passes it on unchanged.
 - **What it stores.** Your settings, your Slack user id, first name and DM channel, the waiting pings (so several
   sessions share one DM), the Slack messages it already handled, and the approval counts, in Claude Code's plugin
   storage.
@@ -84,8 +101,9 @@ events and nothing else:
   turn has begun.
 - `turn.complete`: starts the wait after a finished turn. The answer shown is not changed.
 - `prompt.submit`: closes a finished-turn ping when you type on the machine. Your prompt is not changed.
-- `tool.check`: when Claude Code is about to ask you for permission, starts the wait and notes the call for the
-  counter. It returns Claude Code's own verdict, except for the one call you allowed from Slack, which it allows once.
+- `classic.PermissionRequest`: when Claude Code shows you a permission prompt, starts the wait and notes the call
+  for the counter. It decides nothing: it passes the request on unchanged with `next(e)`, so you answer the prompt on
+  your machine as usual.
 - `tool.call`: starts the wait for a question (AskUserQuestion), and closes any wait when its call ends. For the
   counter, notes an approved call. It never changes the call or its result.
 - `session.end`: closes this session's pings.
