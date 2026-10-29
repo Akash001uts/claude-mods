@@ -1,0 +1,9 @@
+{
+  "name": "tool-guards",
+  "version": "0.1.0",
+  "description": "Stops Claude editing files through the shell (so /rewind works), keeps its attribution out of your commits and PRs, and asks before a read that would eat a quarter of your remaining context",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}
