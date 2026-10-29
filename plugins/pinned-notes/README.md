@@ -4,11 +4,22 @@ Sometimes there's one thing I need Claude to remember for the whole session, lik
 touch the tests folder" or the name of the branch I'm on. If I just say it once, it scrolls away, and after a compact
 it can get lost in the summary. This mod lets you pin it instead.
 
+## Install
+
+```
+/plugin install pinned-notes --marketplace Akash001uts/claude-mods
+```
+
 ## How it works
 
 - `/pin Use Australian spelling` pins a note. It shows above the prompt with a 📌 and stays there for the rest of the
   session.
 - `/pin` on its own pins the last message you typed, so you can pin something after you've already said it.
+- `/pin <path>` pins a file or folder, like `/pin C:\Uni\Assignment 2\spec.pdf`, `/pin ~/notes` or `/pin ./docs`
+  (relative paths start from the project folder, quotes around the path are fine). It shows as 📄 or 📁 with the last
+  part of the path as a link, and Claude gets the full path, so it can read the file when it's relevant without you
+  saying where it is. Clicking the link opens it however your terminal opens `file://` links (most open the file or
+  folder; some don't support them). If the path doesn't exist, it's pinned as plain text instead.
 - Claude gets the pinned notes in its system prompt, told to treat them as standing instructions. Because they're in
   the system prompt and not the conversation, they're still there after a compact.
 - `/pin list` shows every pin in full, `/unpin 2` removes one, `/unpin` on its own removes the latest one, and
@@ -39,6 +50,9 @@ Up to 20 pins, each up to 1000 characters.
   the conversation, so it costs a bit more that one time.
 - **What it reads.** The text of the prompts you type, only so `/pin` on its own can pin the last one. It keeps the
   latest one in memory and doesn't store or send it anywhere. Slash commands and messages from other tools are skipped.
+  When you `/pin` something shaped like a path (starting with a drive letter, `/`, `~`, `./` or `../`), it checks
+  once that the file or folder exists and whether it's a file or a folder. It doesn't open or read the file. For `~` it
+  reads your `HOME` (or `USERPROFILE`) environment variable to find your home folder.
 - **What it asks.** At the start of a new session, if your last session left pins, one question (Claude Code's own
   question box) asking whether to keep them. Nothing is asked when there's nothing to carry over, when you resume a
   session, or in a `claude -p` run.
@@ -61,11 +75,13 @@ The mod is one file, `hooks/register.tsx`. It hooks these events and nothing els
   latest one in memory for `/pin` on its own. It passes the prompt on unchanged.
 - `prompt.compose`: while anything is pinned, adds one section listing your pins at the end of the system prompt.
   It leaves the other sections, your settings, instructions and tool descriptions as they are.
-- `command.run` (for `/pin` and `/unpin` only): pins, lists, hides, shows or unpins notes.
-- `ui.render` for the area above the prompt: draws the pins. Anything else drawn there by Claude Code or other plugins
-  still shows.
+- `command.run` (for `/pin` and `/unpin` only): pins, lists, hides, shows or unpins notes. For a path, it checks the
+  file or folder exists (`$.fs.stat`) before pinning it as a file pin.
+- `ui.render` for the area above the prompt: draws the pins, with file pins as `file://` links. Anything else drawn
+  there by Claude Code or other plugins still shows.
 
-It never runs commands or processes, reads or writes your files, makes network requests, or answers tool calls.
+It never runs commands or processes, opens, reads or writes your files, makes network requests, or answers tool
+calls. Opening a pinned file is up to your terminal when you click the link.
 
 This mod used to be called session-pins (the directory flagged that name as too close to another listing). Pins saved
 under the old name don't carry over.
