@@ -71,6 +71,8 @@ session. No bot, no tokens of your own.
   storage.
 - It never writes files, runs commands or changes settings.
 
+[Privacy](PRIVACY.md): what it reads and stores, where, who it's shared with and how to delete it.
+
 ## What each hook does
 
 The mod is `hooks/register.tsx`, with the Slack reading and the DM wording in `hooks/slack.ts`. It hooks these
