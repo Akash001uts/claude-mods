@@ -20,10 +20,10 @@ async function home($: EngineInterface) {
 // Everything the skills write lives here; the mod only reads it.
 const dirOf = async ($: EngineInterface) => `${((await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${await home($)}/.claude`).replace(/\\/g, '/')}/application-assistant`
 
-async function readJson<T>($: EngineInterface, path: string): Promise<T | undefined> {
+async function readJson($: EngineInterface, path: string): Promise<unknown> {
   const text = await $.fs.read(path).catch(() => '')
   try {
-    return text ? (JSON.parse(text) as T) : undefined
+    return text ? (JSON.parse(text) as unknown) : undefined
   } catch {
     return undefined
   }
@@ -81,9 +81,11 @@ const HELP = [
 
 async function refresh($: EngineInterface) {
   const dir = await dirOf($)
-  const list = (await readJson<Reminder[]>($, `${dir}/reminders.json`)) ?? []
+  const storedReminders = await readJson($, `${dir}/reminders.json`)
+  const list = (storedReminders as Reminder[] | undefined) ?? []
   await update($, reminders, () => list)
-  const c = await readJson<Config>($, `${dir}/config.json`)
+  const storedConfig = await readJson($, `${dir}/config.json`)
+  const c = storedConfig as Config | undefined
   const root = await $.session.root()
   await update($, isHere, () => Boolean(c?.applicationsDir && same(root, c.applicationsDir)))
   return c
@@ -97,7 +99,8 @@ async function rundown($: EngineInterface, c: Config) {
   if (state === 'failed') lines.push(`⚠ The last scan failed${c.lastScanError ? `: ${c.lastScanError}` : ''}. /apply check runs it again.`)
   if (state === 'missed') lines.push('⚠ Today\'s scan hasn\'t run (the scheduled routine missed it). Scanning now.')
   if (c.newRoles !== undefined) lines.push(`${c.newRoles} new role${c.newRoles === 1 ? '' : 's'} in the last digest${c.lastDigest ? ` (${c.lastDigest})` : ''}.`)
-  const due = soon((await read($, reminders)) as Reminder[], today)
+  const stored = await read($, reminders)
+  const due = soon(stored as Reminder[], today)
   for (const r of due) lines.push(`${r.kind === 'followup' ? '↩' : '•'} ${r.what}: ${when(r.due, today)}`)
   if (c.weeklyReview && new Date(now).toLocaleDateString('en-AU', { weekday: 'long' }).toLowerCase() === c.weeklyReview.toLowerCase() && c.lastReview !== today)
     lines.push(`It's ${c.weeklyReview}: /apply review for the weekly review.`)
@@ -170,8 +173,10 @@ export const register: Register = on => {
 
   // Due dates and follow-ups, above the prompt in the applications folder.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const all = (await read($, reminders)) as Reminder[]
-    if (e.props.hasSurvey || !(await read($, isHere)) || all.length === 0) return next(e)
+    const stored = await read($, reminders)
+    const all = stored as Reminder[]
+    const here = await read($, isHere)
+    if (e.props.hasSurvey || !here || all.length === 0) return next(e)
     const today = dayOf(await $.clock.now())
     const due = soon(all, today)
     if (due.length === 0) return next(e)
