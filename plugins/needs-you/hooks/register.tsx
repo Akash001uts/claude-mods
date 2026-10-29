@@ -237,8 +237,8 @@ async function setup($: EngineInterface) {
     'When should needs-you message you on Slack? After Claude has waited on you for 5 minutes: a finished turn, a permission prompt, a question. The counter suggests allow rules for commands you approve every time.',
     { header: 'Needs-you', options: [...KINDS], multiSelect: true },
   )
-  const on = picked.split(',').map(p => p.trim())
-  const s: Settings = { ...(await get($)), turns: on.includes(KINDS[0]), permissions: on.includes(KINDS[1]), questions: on.includes(KINDS[2]), counter: on.includes(KINDS[3]) }
+  const chosen = picked.split(',').map(p => p.trim())
+  const s: Settings = { ...(await get($)), turns: chosen.includes(KINDS[0]), permissions: chosen.includes(KINDS[1]), questions: chosen.includes(KINDS[2]), counter: chosen.includes(KINDS[3]) }
   await put($, s)
   $.ui.log(`needs-you: ${status(s)}\n${await slackLine($)}`)
 }
@@ -252,8 +252,8 @@ async function slackLine($: EngineInterface) {
 }
 
 const status = (s: Settings) => {
-  const on = [s.turns && 'finished turns', s.permissions && 'permission prompts', s.questions && 'questions', s.counter && 'permission counter'].filter(Boolean)
-  return `${on.length ? `${on.join(', ')} on` : 'everything off'}; pings after ${s.waitMin} minute${s.waitMin === 1 ? '' : 's'} of waiting.`
+  const parts = [s.turns && 'finished turns', s.permissions && 'permission prompts', s.questions && 'questions', s.counter && 'permission counter'].filter(Boolean)
+  return `${parts.length ? `${parts.join(', ')} on` : 'everything off'}; pings after ${s.waitMin} minute${s.waitMin === 1 ? '' : 's'} of waiting.`
 }
 
 const HELP = [
@@ -319,9 +319,9 @@ export const register: Register = on => {
 
   // Typing on the machine answers a finished turn.
   on('prompt.submit', async ($, e, next) => {
-    if (e.origin.kind === 'composer') await close($, waits.get('turn'))
+    if (e.origin.kind === 'composer') await close($, waits.get('turn')).catch(() => undefined)
     return next(e)
-  }).catch(($, e, next) => next(e))
+  })
 
   // A permission prompt: Claude Code shows its own box; the wait starts. A call allowed from Slack is allowed once
   // when Claude runs it again.
@@ -344,26 +344,31 @@ export const register: Register = on => {
   // rule.
   on('tool.call', async ($, e, next) => {
     const id = e.tool_use_id
-    if (String(e.tool) === 'AskUserQuestion' && !e.agentId && (await get($)).questions)
-      waits.set(id, { id, kind: 'question', since: await $.clock.now(), text: '', questions: (e as unknown as { questions: Question[] }).questions })
+    try {
+      if (String(e.tool) === 'AskUserQuestion' && !e.agentId && (await get($)).questions)
+        waits.set(id, { id, kind: 'question', since: await $.clock.now(), text: '', questions: (e as unknown as { questions: Question[] }).questions })
+    } catch {}
     const result = await next(e)
-    await close($, waits.get(id))
-    const rule = asked.get(id)
-    if (rule) {
-      asked.delete(id)
-      if (result.deny === undefined) {
-        const counts = ((await $.store.get('counts')) as Record<string, number> | undefined) ?? {}
-        counts[rule] = (counts[rule] ?? 0) + 1
-        await $.store.set('counts', counts)
-        const told = ((await $.store.get('suggested')) as string[] | undefined) ?? []
-        if (counts[rule] >= SUGGEST_AT && !told.includes(rule)) {
-          await $.store.set('suggested', [...told, rule])
-          $.ui.log(`needs-you: you've approved ${rule} ${counts[rule]} times. To stop being asked, add "${rule.replace(/"/g, '\\"')}" to "permissions.allow" in ~/.claude/settings.json (or .claude/settings.json for this project only).`)
+    // A slip in the waits or the counter never costs Claude the result.
+    try {
+      await close($, waits.get(id))
+      const rule = asked.get(id)
+      if (rule) {
+        asked.delete(id)
+        if (result.deny === undefined) {
+          const counts = ((await $.store.get('counts')) as Record<string, number> | undefined) ?? {}
+          counts[rule] = (counts[rule] ?? 0) + 1
+          await $.store.set('counts', counts)
+          const told = ((await $.store.get('suggested')) as string[] | undefined) ?? []
+          if (counts[rule] >= SUGGEST_AT && !told.includes(rule)) {
+            await $.store.set('suggested', [...told, rule])
+            $.ui.log(`needs-you: you've approved ${rule} ${counts[rule]} times. To stop being asked, add "${rule.replace(/"/g, '\\"')}" to "permissions.allow" in ~/.claude/settings.json (or .claude/settings.json for this project only).`)
+          }
         }
       }
-    }
+    } catch {}
     return result
-  }).catch(($, e, next) => next(e))
+  })
 
   on('session.end', async ($, e, next) => {
     for (const w of [...waits.values()]) await close($, w).catch(() => undefined)
