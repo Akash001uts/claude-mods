@@ -59,14 +59,26 @@ table in the mod, dated in the pane, and need updating when Anthropic changes th
 - **What it reads.** This session's transcript file, and, when you say yes to backfill, the other transcripts under
   `~/.claude/projects`. The `cleanupPeriodDays` setting. The environment variables `USERPROFILE`/`HOME` (your home
   folder), `CLAUDE_CONFIG_DIR`, `COMPUTERNAME`/`HOSTNAME` (to name this PC's index file) and `OS`.
-- **What it writes.** Only inside the archive folder you chose: the copies, `index-<pc>.json` and a `README.txt`. With
-  sessions left in place, just the index, in `~/.claude/session-archive`.
-- **What it sends.** Titles are written by a Haiku call that sees the opening of the session (your messages and the
-  start of Claude's replies, up to 6,000 characters). A search by meaning sends your search words and the index's
-  titles, summaries and keywords. Both go to Anthropic through Claude Code, the same place the conversation already
-  went. Plain-text search sends nothing.
-- **What it runs.** Only for a transcript over 4 MiB: `cmd /c mkdir` and `cmd /c copy /y <transcript> <archive copy>`
-  on Windows, `mkdir -p` and `cp` elsewhere. Nothing else.
+- **What files it writes.** Only inside the archive folder you chose: the copies (`.jsonl` and/or `.md`),
+  `index-<pc>.json` (its list of sessions with titles and stats) and a `README.txt`. With sessions left in place, just
+  the index, in `~/.claude/session-archive`. None of these is a build, start-up, settings or instructions file, and
+  no tool runs or obeys them. The paths aren't fixed text because the folder is the one you pick at setup.
+- **What it sends and where.** It reads the conversation (the session's transcript) and sends parts of it out in one
+  way only: `$.model.complete`, a Haiku call made through Claude Code to Anthropic, the same place the conversation
+  already went.
+  - Titles: the Haiku call sees the opening of the session (your messages and the start of Claude's replies, up to
+    6,000 characters) and writes a title, summary and keywords.
+  - A search by meaning sends your search words and the index's titles, summaries and keywords, never whole
+    transcripts.
+  - Plain-text search sends nothing. The copy commands below only copy a file from one folder on your computer to
+    another; they send nothing anywhere.
+- **Which programs it starts and why.** Only for a transcript over 4 MiB, because a mod can't read or write a file
+  that big:
+  - Windows: `cmd /c mkdir <archive project folder>` then `cmd /c copy /y <transcript> <archive copy>`. It starts
+    `cmd` because `mkdir` and `copy` are built into it (there's no separate copy program). Both arguments are file
+    paths, never other commands.
+  - macOS and Linux: `mkdir -p <archive project folder>` then `cp <transcript> <archive copy>`, run directly, no shell.
+  - No network tools, no scripts, nothing else.
 - **What it asks.** The four first-run questions, once.
 - **What it stores.** Your settings, per-project opt-outs and the queue of sessions waiting to be copied, in Claude
   Code's plugin storage.
@@ -84,6 +96,8 @@ The mod is `hooks/register.tsx`, with the parsing in `hooks/archive.ts`. It hook
   It doesn't change the answer.
 - `classic.SessionEnd`: makes the final copy of the session.
 - `classic.UserPromptSubmit`: once a session has a title, sets it as the session's title in Claude Code's own list
-  (`sessionTitle`), once per title. It doesn't touch your prompt.
+  (`sessionTitle`), once per title. It doesn't touch your prompt and takes no permission decision: it passes the
+  event on with `next(e)` and returns that result unchanged, only adding `sessionTitle` when there's a new title. It
+  never blocks a prompt or changes a decision another hook made.
 - `command.run` (`/sessions` only): answers the command.
 - `ui.render` (the stats pane only): draws the pane.
