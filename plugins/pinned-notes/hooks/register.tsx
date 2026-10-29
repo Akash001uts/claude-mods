@@ -36,6 +36,22 @@ export const parts = (text: string) =>
   text.split(/(https?:\/\/[^\s<>"']*[^\s<>"'.,;:!?)\]])/).filter(Boolean).map(part => ({ part, isUrl: /^https?:\/\//.test(part) }))
 
 export type Piece = { text: string; href?: string }
+
+// Only an argument shaped like a path is checked on disk: `C:\...`, `/...`, `~/...`, `./...` or `../...`.
+export const looksLikePath = (arg: string) => !arg.includes('\n') && /^(~(?=$|[\\/])|\.{1,2}[\\/]|[A-Za-z]:[\\/]|\/)/.test(arg)
+
+// What the terminal opens: backslashes to `/`, each segment percent-encoded, the drive letter kept.
+export const fileUrl = (path: string) => {
+  const segs = path.replace(/\\/g, '/').split('/')
+  const encoded = segs.map((seg, i) => (i === 0 && /^[A-Za-z]:$/.test(seg) ? seg : encodeURIComponent(seg))).join('/')
+  return `file://${encoded.startsWith('/') ? '' : '/'}${encoded}`
+}
+
+// A file pin's label: its last two segments, cut from the front when that still doesn't fit.
+export const fileLabel = (path: string, width: number) => {
+  const tail = path.split(/[\\/]/).filter(Boolean).slice(-2).join(path.includes('\\') ? '\\' : '/')
+  return tail.length <= width ? tail : `…${tail.slice(-Math.max(1, width - 1))}`
+}
 const LINK_MIN = 24
 
 // Cut to `max` characters, ending in an ellipsis.
@@ -77,7 +93,7 @@ export const section = (list: readonly Pin[]) =>
   [
     '# Pinned notes',
     'The user pinned these to the top of this session. Treat them as standing instructions and context for the whole session: they still apply after compaction, until the user unpins them. Don\'t comment on them unless asked.',
-    ...list.map((p, i) => `${i + 1}. ${p.text}`),
+    ...list.map((p, i) => `${i + 1}. ${p.kind ? `${p.kind === 'dir' ? 'Folder' : 'File'} (read it when it's relevant): ${p.text}` : p.text}`),
   ].join('\n')
 
 async function save($: EngineInterface, list: Pin[]) {
@@ -144,14 +160,32 @@ async function offer($: EngineInterface) {
 const list = (all: readonly Pin[]) =>
   all.length === 0 ? 'Nothing pinned. /pin <text> pins a note; /pin on its own pins your last message.' : all.map((p, i) => `${i + 1}. ${p.text}`).join('\n')
 
+// An existing file or folder, as an absolute path: `~` is the home folder, a relative path is from the project root.
+// Anything else (not shaped like a path, or nothing there) is undefined, and pins as text.
+async function findPath($: EngineInterface, arg: string) {
+  const bare = arg.replace(/^(["'])(.*)\1$/, '$2')
+  if (!looksLikePath(bare)) return undefined
+  let full = bare
+  if (bare.startsWith('~')) {
+    const home = (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE'))
+    if (!home) return undefined
+    full = home + bare.slice(1)
+  } else if (bare.startsWith('.')) full = `${await $.session.root()}/${bare}`
+  const stat = await $.fs.stat(full, { resolve: true }).catch(() => undefined)
+  if (!stat || stat.kind === 'other') return undefined
+  return { path: stat.realPath ?? full, kind: stat.kind }
+}
+
 async function add($: EngineInterface, text: string) {
   const now = await read($, pins)
   if (now.length >= MAX_PINS) return `You already have ${MAX_PINS} pins. /unpin one first.`
-  const clean = text.trim().slice(0, MAX_CHARS)
+  const found = await findPath($, text.trim())
+  const clean = found?.path ?? text.trim().slice(0, MAX_CHARS)
   if (now.some(p => p.text === clean)) return 'That\'s already pinned.'
-  await save($, [...now, { text: clean, pinnedAt: await $.clock.now() }])
+  await save($, [...now, { text: clean, pinnedAt: await $.clock.now(), ...(found && { kind: found.kind }) }])
   await update($, isHidden, () => false)
-  return `Pinned (#${now.length + 1}). Claude sees it for the rest of the session.`
+  const what = found ? (found.kind === 'dir' ? 'Folder pinned' : 'File pinned') : 'Pinned'
+  return `${what} (#${now.length + 1}). Claude sees it for the rest of the session.`
 }
 
 async function remove($: EngineInterface, arg: string) {
@@ -258,6 +292,15 @@ export const register: Register = on => {
               {squeeze && <Text dimColor>{squeeze}</Text>}
             </Text>
           )
+          // A file or folder: its name as a link the terminal opens. Claude has the full path.
+          if (p.kind)
+            return (
+              <Text wrap="truncate">
+                {head}
+                <Text>{p.kind === 'dir' ? '📁 ' : '📄 '}</Text>
+                <Link href={fileUrl(p.text)}>{fileLabel(p.text, width - 3)}</Link>
+              </Text>
+            )
           // Opened out: the whole pin, wrapped, links live, and a way to fold it back.
           if (open === p.text)
             return (

@@ -106,6 +106,7 @@ when the session compacts. Pinned, they stay on screen for me and in the system 
 compact.
 
 - `/pin <text>` pins a note, and `/pin` on its own pins the last message you typed.
+- `/pin <path>` pins a file or folder as a link, and Claude gets the full path so it can read it when it's relevant.
 - `/pin list` shows them all, `/unpin 2` removes one, `/unpin` removes the latest and `/unpin all` clears them.
 - `/pin hide` and `/pin show` hide or show them above the prompt (Claude still sees them).
 - Pins come back if you resume the session, but `/clear` or a new session starts fresh.

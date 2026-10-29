@@ -1,4 +1,5 @@
-export type Pin = { text: string; pinnedAt: number }
+// `kind` marks a pinned file or folder, whose `text` is its absolute path.
+export type Pin = { text: string; pinnedAt: number; kind?: 'file' | 'dir' }
 
 declare module 'claude-code' {
   interface PluginState {

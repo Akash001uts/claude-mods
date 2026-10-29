@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 
-import { KEEP, UNPIN, fit, parts } from '../hooks/register'
+import { KEEP, UNPIN, fileLabel, fileUrl, fit, looksLikePath, parts } from '../hooks/register'
 
 const BAND = {
   component: 'AbovePrompt' as const,
@@ -318,4 +318,48 @@ test("another project's pins aren't offered", async ($, on) => {
   asking.root = 'c:/proj'
   await start($)
   expect(asking.questions[1]).toMatch(/Keep the 2 pins/)
+})
+
+// Stands in for the disk: these paths exist, nothing else does.
+function disk(on: On, files: Record<string, 'file' | 'dir'>) {
+  on('env.get', ($, e) => ({ value: e.name === 'USERPROFILE' ? 'C:\\Users\\me' : undefined }))
+  on('fs.stat', ($, e) => {
+    const path = e.path.split('\\').join('/').split('/./').join('/')
+    const kind = files[path]
+    if (!kind) throw new Error('ENOENT')
+    return { value: { kind, size: 0, mtimeMs: 0, isLink: false, realPath: path.split('/').join('\\') } }
+  })
+}
+
+test('only arguments shaped like paths are looked up', () => {
+  for (const path of ['C:\\Users\\me\\spec.pdf', 'C:/x', '~/notes', '~', './a', '..\\b', '/etc/hosts']) expect(looksLikePath(path)).toBe(true)
+  for (const text of ['Use Australian spelling', '~not a path', 'see C:\\x', 'https://example.com', '.hidden']) expect(looksLikePath(text)).toBe(false)
+})
+
+test('file links open the full path, labelled by its last two parts', () => {
+  expect(fileUrl('C:\\Users\\me\\Assignment 2\\spec #1.pdf')).toBe('file:///C:/Users/me/Assignment%202/spec%20%231.pdf')
+  expect(fileUrl('/home/me/a b')).toBe('file:///home/me/a%20b')
+  expect(fileLabel('C:\\Users\\me\\Assignment 2\\spec.pdf', 40)).toBe('Assignment 2\\spec.pdf')
+  expect(fileLabel('C:\\Users\\me\\Assignment 2\\spec.pdf', 10)).toBe('…\\spec.pdf')
+})
+
+test('/pin <path> pins an existing file or folder as a link, and gives Claude the full path', async ($, on) => {
+  engine(on)
+  disk(on, { 'C:/Users/me/Assignment 2/spec.pdf': 'file', 'C:/Proj/docs': 'dir' })
+  await start($)
+  expect((await run($, 'pin', '"C:\\Users\\me\\Assignment 2\\spec.pdf"')).text).toMatch(/File pinned \(#1\)/)
+  expect((await run($, 'pin', './docs')).text).toMatch(/Folder pinned \(#2\)/)
+  expect((await run($, 'pin', '~/Assignment 2/spec.pdf')).text).toMatch(/already pinned/)
+  // Not there: a plain text pin.
+  expect((await run($, 'pin', 'C:\\nowhere.txt')).text).toMatch(/^Pinned \(#3\)/)
+
+  const section = (await pinsSection($)) ?? ''
+  expect(section).toContain("1. File (read it when it's relevant): C:\\Users\\me\\Assignment 2\\spec.pdf")
+  expect(section).toContain("2. Folder (read it when it's relevant): C:\\Proj\\docs")
+  expect(section).toContain('3. C:\\nowhere.txt')
+
+  const ui = await $.ui.mount({ plugin: 'pinned-notes', surface: 'terminal', ...BAND })
+  const links = (await ui.findAll({ type: 'Link' })).map(link => link.props.href)
+  expect(links).toEqual(['file:///C:/Users/me/Assignment%202/spec.pdf', 'file:///C:/Proj/docs'])
+  await ui.unmount()
 })
