@@ -1,0 +1,10 @@
+{
+  "name": "session-archive",
+  "version": "0.1.0",
+  "description": "Keeps a copy of every Claude Code session before the 30-day cleanup, titles each one, searches them by meaning and shows your usage stats in a pane",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
