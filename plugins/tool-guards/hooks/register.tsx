@@ -183,21 +183,23 @@ export const register: Register = on => {
     }
   })
 
-  // Big reads: before a file read that would take a quarter or more of the context left, ask the person.
+  // Big reads: before a file read that would take a quarter or more of the context left, ask the person. Any other
+  // read is passed on untouched; a read the user's own rules deny stays denied.
   on('tool.check', { tool: 'Read' }, async ($, e, next) => {
-    const verdict = await next(e)
-    if (verdict.decision === 'deny' || e.approver !== 'person' || e.agentId) return verdict
+    if (e.approver !== 'person' || e.agentId) return next(e)
     const s = await get($)
-    if (!s.reads) return verdict
+    if (!s.reads) return next(e)
     const input = e.input as { file_path?: string; offset?: number; limit?: number }
-    if (!input.file_path || NOT_TEXT.test(input.file_path)) return verdict
+    if (!input.file_path || NOT_TEXT.test(input.file_path)) return next(e)
     const stat = await $.fs.stat(input.file_path).catch(() => undefined)
-    if (!stat || stat.kind !== 'file') return verdict
+    if (!stat || stat.kind !== 'file') return next(e)
     // A line range reads part of the file: about 80 characters a line, never more than the file.
     const chars = input.limit ? Math.min(stat.size, input.limit * 80) : stat.size
     const tokens = Math.ceil(chars / CHARS_PER_TOKEN)
     const room = await left($).catch(() => undefined)
-    if (room === undefined || tokens < room * SHARE) return verdict
+    if (room === undefined || tokens < room * SHARE) return next(e)
+    const verdict = await next(e)
+    if (verdict.decision === 'deny') return { decision: 'deny', reason: verdict.reason }
     const pct = Math.round((tokens / room) * 100)
     tell(s, $, `asked before a read of about ${pct}% of the context left`)
     return {
