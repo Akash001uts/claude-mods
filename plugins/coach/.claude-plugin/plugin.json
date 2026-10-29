@@ -1,0 +1,9 @@
+{
+  "name": "coach",
+  "version": "0.1.0",
+  "description": "Adds a note for Claude when it goes round in circles on the same error, says it's done without checking, or slips into writing habits you've banned. Never blocks anything",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}
