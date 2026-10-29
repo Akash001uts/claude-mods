@@ -84,6 +84,8 @@ table in the mod, dated in the pane, and need updating when Anthropic changes th
   Code's plugin storage.
 - It never changes settings, never deletes anything and never sends anything outside Claude Code.
 
+[Privacy](PRIVACY.md): what it reads and stores, where, who it's shared with and how to delete it.
+
 ## What each hook does
 
 The mod is `hooks/register.tsx`, with the parsing in `hooks/archive.ts`. It hooks these events and nothing else:

@@ -6,5 +6,6 @@
     "name": "Akash Bhatnagar"
   },
   "license": "MIT",
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "privacyPolicyUrl": "https://github.com/Akash001uts/claude-mods/blob/release-session-archive/plugins/session-archive/PRIVACY.md"
 }
