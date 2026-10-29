@@ -1,9 +1,15 @@
-# writing-assistant
+# write-like-me
 
 I ask Claude to help me write a lot of messages: emails to lecturers, replies to recruiters, LinkedIn posts, Slack
 messages for my club. Every time, the first draft sounded like Claude and not like me, and I'd spend two or three
 rounds going "less formal", "shorter", "I wouldn't say that". This mod learns how I actually write once, and then
 uses it every time I ask for a draft.
+
+## Install
+
+```
+/plugin install write-like-me --marketplace Akash001uts/claude-mods
+```
 
 ## How it works
 
@@ -47,7 +53,7 @@ uses it every time I ask for a draft.
   prompts. The emails, messages and files it samples are read by Claude in that conversation, the same as anything
   else you share with it; only the summary and short excerpts are kept.
 - **What it reads.** The `USERPROFILE` (or `HOME`) environment variable, to find your home folder, and the profile file
-  at `~/.claude/writing-assistant/profile.md`. It checks the file's size and modified time whenever Claude Code builds its
+  at `~/.claude/write-like-me/profile.md`. It checks the file's size and modified time whenever Claude Code builds its
   system prompt and re-reads it only when it changed.
 - **What it adds to the system prompt.** If you have a profile, one section with your saved rules and your voices
   (just the summary lines if the profile is over 8,000 characters), and a note telling Claude to use the draft skill
@@ -57,7 +63,20 @@ uses it every time I ask for a draft.
   Claude, not by the mod. It holds a description of each voice plus up to three short excerpts per voice (with phone
   numbers, emails, IDs and other people's names taken out), never whole messages. The mod itself only stores one
   value in plugin storage, so it knows whether it's asked you yet.
-- It doesn't run commands, register tools or change your prompts. Delete the profile file to start over.
+- It doesn't run shell commands, register tools or agents, or change your prompts. Delete the profile file to start
+  over.
+
+## What each hook does
+
+- **`session.start`**: registers the `/write` command (its only command), reads the profile, and in the first
+  interactive session with no profile, asks the setup question once (see above).
+- **`prompt.compose`**: adds the one section described under "What it adds to the system prompt". It leaves the rest
+  of the system prompt, your settings, instructions, other hooks' sections and tool descriptions as they are.
+- **`command.run`**: only for `/write`. On its own it shows your profile summary; `/write setup` asks the setup
+  question again. It doesn't see or change any other command.
+- **The one prompt it submits** (`prompt.submit`, only after you tick sources): `Set up my voice profile from:
+  [the sources you ticked]. Use the write-like-me:setup skill. Profile file: [path]`. The profile's contents and
+  anything else it reads never go in that prompt.
 
 ## Licence
 

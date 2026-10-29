@@ -10,7 +10,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | [context-bar](plugins/context-bar) | Always-on bar showing how full the context window is, plus your rate limits | Published in Claude's plugin directory |
 | [auto-handoff](plugins/auto-handoff) | Hands a long session off cleanly before it compacts (was context-handoff) | In review for the directory |
 | [pinned-notes](plugins/pinned-notes) | Pins notes to a session so they stay on screen and Claude keeps to them (was session-pins) | In review for the directory |
-| [writing-assistant](plugins/writing-assistant) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
+| [write-like-me](plugins/write-like-me) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
 | [assessment-marker](plugins/assessment-marker) | Marks your uni assessments against the real rubric, with HD as the bar | New, not submitted yet |
 
 ## Install
@@ -20,7 +20,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin install context-bar@akash-mods
 /plugin install auto-handoff@akash-mods
 /plugin install pinned-notes@akash-mods
-/plugin install writing-assistant@akash-mods
+/plugin install write-like-me@akash-mods
 /plugin install assessment-marker@akash-mods
 ```
 
@@ -110,7 +110,7 @@ compact.
 - `/pin hide` and `/pin show` hide or show them above the prompt (Claude still sees them).
 - Pins come back if you resume the session, but `/clear` or a new session starts fresh.
 
-## writing-assistant
+## write-like-me
 
 Learns how you write and then drafts messages in your voice. The first time you open Claude Code after installing it,
 you tick which sources it can learn from (Gmail, Slack, LinkedIn posts, assignments and reports) and skip the rest.
@@ -120,7 +120,7 @@ voice and how formal to be.
 **Why it's useful:** I was spending two or three rounds on every email or post getting the tone right. Now the first
 draft is already close, and when I correct something ("remember I never say X") it sticks.
 
-- It keeps a profile at `~/.claude/writing-assistant/profile.md` that you can open and edit.
+- It keeps a profile at `~/.claude/write-like-me/profile.md` that you can open and edit.
 - `/write` shows the profile and `/write setup` adds more sources later.
 - It only reads the sources you tick, through your own connectors, and keeps a short description plus a few short
   excerpts, not your messages.
@@ -141,13 +141,13 @@ move a band. When marks come back it learns what that marker cares about.
 
 ## What they run and store
 
-None of them send anything outside Claude Code (writing-assistant reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
+None of them send anything outside Claude Code (write-like-me reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
 auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, pinned-notes adds your pins to
-the system prompt and saves them in plugin storage, writing-assistant adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. Each plugin's own README has
+the system prompt and saves them in plugin storage, write-like-me adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [auto-handoff](plugins/auto-handoff/README.md#what-it-runs-and-stores),
 [pinned-notes](plugins/pinned-notes/README.md#what-it-runs-and-stores),
-[writing-assistant](plugins/writing-assistant/README.md#what-it-runs-and-stores),
+[write-like-me](plugins/write-like-me/README.md#what-it-runs-and-stores),
 [assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores).
 
 ## Notes

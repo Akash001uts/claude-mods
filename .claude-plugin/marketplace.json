@@ -26,10 +26,10 @@
       "version": "0.3.0"
     },
     {
-      "name": "writing-assistant",
-      "source": "./plugins/writing-assistant",
+      "name": "write-like-me",
+      "source": "./plugins/write-like-me",
       "description": "Drafts and edits messages in your own voice. A one-time setup learns how you write from the sources you tick (Gmail, Slack, LinkedIn posts, assignments), then plain requests like \"reply to this recruiter\" come out sounding like you",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "assessment-marker",

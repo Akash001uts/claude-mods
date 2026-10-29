@@ -4,7 +4,7 @@ import type { Engine, MockClock } from 'claude-code/testing'
 
 import { QUESTION, SKIPPED, SOURCES, TRIMMED, parseAnswer, promptProfile, voicesIn } from '../hooks/register'
 
-const PATH = 'C:/Users/me/.claude/writing-assistant/profile.md'
+const PATH = 'C:/Users/me/.claude/write-like-me/profile.md'
 const PROFILE = [
   '# Voice profile',
   '## Email\nSummary: short, "Hi" + first name\n- Sign-off: Regards, Akash',
@@ -82,7 +82,7 @@ const run = async ($: Engine, args: string) => {
   return r
 }
 const COMPOSE = { model: 'test', promptModel: 'test', surfaces: ['terminal' as const], tools: [], outputStyle: null, traits: [] }
-const guide = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.find(s => s.id === 'writing-assistant:guide')?.text
+const guide = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.find(s => s.id === 'write-like-me:guide')?.text
 
 test('first session asks once with the four sources as a tick-box list', async ($, on) => {
   const seen = engine(on, { answer: null })
@@ -105,7 +105,7 @@ test('only the ticked sources go to the setup prompt', async ($, on) => {
   expect(seen.submitted.length).toBe(1)
   expect(seen.submitted[0]).toMatch(/^Set up my voice profile from: Gmail, Assignments and reports\./)
   expect(seen.submitted[0]).not.toMatch(/Slack|LinkedIn/)
-  expect(seen.submitted[0]).toMatch(/writing-assistant:setup/)
+  expect(seen.submitted[0]).toMatch(/write-like-me:setup/)
   expect(seen.submitted[0]).toMatch(PATH)
 })
 
@@ -156,7 +156,7 @@ test('with a profile there is no question and Claude gets the profile, rules fir
   await start($)
   expect(seen.asked).toEqual([])
   const text = (await guide($))!
-  expect(text).toMatch(/writing-assistant:draft/)
+  expect(text).toMatch(/write-like-me:draft/)
   expect(text).toMatch(PATH)
   expect(text.indexOf('## Remembered')).toBeLessThan(text.indexOf('## Email'))
   expect(text).not.toMatch(/Nudges|\| Count/)
