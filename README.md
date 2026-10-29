@@ -12,6 +12,11 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | [pinned-notes](plugins/pinned-notes) | Pins notes to a session so they stay on screen and Claude keeps to them (was session-pins) | In review for the directory |
 | [voice-profile](plugins/voice-profile) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
 | [assessment-marker](plugins/assessment-marker) | Marks your uni assessments against the real rubric, with HD as the bar | New, not submitted yet |
+| [session-archive](plugins/session-archive) | Keeps a copy of every session before the 30-day cleanup, with titles, search and a stats pane | New, not submitted yet |
+| [coach](plugins/coach) | Notes for Claude when it loops on the same error, says "done" without checking, or slips into habits you've banned | New, not submitted yet |
+| [tool-guards](plugins/tool-guards) | No shell file edits (so /rewind works), no attribution in your commits, asks before huge reads | New, not submitted yet |
+| [needs-you](plugins/needs-you) | Slack DM when Claude has been waiting on you; reply there to carry on | New, not submitted yet |
+| [application-assistant](plugins/application-assistant) | Job and internship applications: role scan, eligibility checks, packs, form filling, tracker, reminders | New, not submitted yet |
 
 ## Install
 
@@ -22,6 +27,11 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin install pinned-notes@akash-mods
 /plugin install voice-profile@akash-mods
 /plugin install assessment-marker@akash-mods
+/plugin install session-archive@akash-mods
+/plugin install coach@akash-mods
+/plugin install tool-guards@akash-mods
+/plugin install needs-you@akash-mods
+/plugin install application-assistant@akash-mods
 ```
 
 You can install just the ones you want. You need a recent Claude Code build that supports mods
@@ -144,16 +154,77 @@ move a band. When marks come back it learns what that marker cares about.
 - `/mark` is optional (`/mark ready`, `/mark setup`); plain requests work.
 - Everything it keeps goes in each subject's own folder, under `.assessment-marker/`.
 
+## session-archive
+
+Claude Code deletes your transcripts after 30 days and names sessions after whatever you typed first. This keeps a copy
+of every session in a folder you pick (a OneDrive or Dropbox folder doubles as a backup), gives each one a short title
+(also in `/resume` and the desktop sidebar), and lets you search all of them with `/sessions search`.
+
+**Why it's useful:** I lost sessions I wanted back. Now "the session where I sped up the order book" finds it, and
+`/sessions stats` shows a heatmap, streaks, tokens per model and a rough cost per day, month and project, in the
+terminal and the desktop app, without losing old days.
+
+- One copy per session: each copy overwrites the last, so the archive never fills up with snapshots.
+- Search by meaning uses a small Haiku call over titles and summaries; `--plain` is free.
+- `/sessions off` stops it for one project.
+
+## coach
+
+Watches Claude's turns and adds a short note when it goes wrong: going round in circles on the same error, saying
+something works when nothing has run since the files changed, or using phrases and comment styles you've banned.
+
+**Why it's useful:** the "you're absolutely right, fixed!" loop. Coach catches the second identical error and tells
+Claude to stop and rethink, and asks it to run the tests before it says done.
+
+- It never blocks anything; you pick which parts are on and whether you see the notes too.
+- `/coach ban "<phrase>"`, `/coach comments 2`, `/coach language english` set your own rules.
+
+## tool-guards
+
+Checks Claude's tool calls before they run: no editing files through the shell (so `/rewind` can undo everything), no
+Co-Authored-By or "Generated with Claude Code" lines in your commits and PRs, and a permission prompt before a read
+that would take a quarter of the context you have left.
+
+**Why it's useful:** my repos are published under my name, and I kept having to strip attribution out by hand.
+
+- `/guards` turns each guard on or off; shell edits can be limited to auto mode.
+
+## needs-you
+
+When Claude has been waiting on you for 5 minutes (finished, asking permission, or asking a question), it DMs you on
+Slack through the claude.ai Slack connector. Reply in Slack and the session carries on from there.
+
+**Why it's useful:** no more coming back to a session that sat on a permission prompt for an hour.
+
+- Only your own Slack user's replies count. Without Slack, it falls back to Claude Code's push notification.
+- It also notices commands you approve every time and suggests an allow rule.
+
+## application-assistant
+
+Does the daily job-application loop with you: finds roles, checks them against your work rights and dates, builds a
+pack (resume picked or tailored, cover letter, form answers), fills the form in Chrome for you to submit, and keeps
+your tracker and reminders up to date from your inbox.
+
+**Why it's useful:** I was doing all of this by hand for internships. Your profile is built from your own answers at
+setup and stays on your machine.
+
+- It never submits anything and only claims what your base resume already says.
+
 ## What they run and store
 
 None of them send anything outside Claude Code (voice-profile reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
 auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, pinned-notes adds your pins to
-the system prompt and saves them in plugin storage, voice-profile adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. Each plugin's own README has
+the system prompt and saves them in plugin storage, voice-profile adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. session-archive copies transcripts into the folder you choose and sends titles and summaries through small Haiku calls, coach adds notes for Claude and makes one small yes/no call for its done-check, tool-guards refuses or rewrites some commands, needs-you sends pings to your own Slack DM through the claude.ai connector, and application-assistant reads your inbox and resumes only through its skills, when you ask. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [auto-handoff](plugins/auto-handoff/README.md#what-it-runs-and-stores),
 [pinned-notes](plugins/pinned-notes/README.md#what-it-runs-and-stores),
 [voice-profile](plugins/voice-profile/README.md#what-it-runs-and-stores),
-[assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores).
+[assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores),
+[session-archive](plugins/session-archive/README.md#what-it-runs-and-stores),
+[coach](plugins/coach/README.md#what-it-runs-and-stores),
+[tool-guards](plugins/tool-guards/README.md#what-it-runs-and-stores),
+[needs-you](plugins/needs-you/README.md#what-it-runs-and-stores),
+[application-assistant](plugins/application-assistant/README.md#what-it-runs-and-stores).
 
 ## Notes
 

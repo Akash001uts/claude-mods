@@ -36,6 +36,36 @@
       "source": "./plugins/assessment-marker",
       "description": "Marks your uni assessments against the real rubric with High Distinction as the bar: a strict nine-section review, re-marks that catch regressions, a check before you submit, and it learns what each subject's marker cares about",
       "version": "0.1.0"
+    },
+    {
+      "name": "session-archive",
+      "source": "./plugins/session-archive",
+      "description": "Keeps a copy of every Claude Code session before the 30-day cleanup, titles each one, searches them by meaning and shows your usage stats in a pane",
+      "version": "0.1.0"
+    },
+    {
+      "name": "coach",
+      "source": "./plugins/coach",
+      "description": "Adds a note for Claude when it goes round in circles on the same error, says it's done without checking, or slips into writing habits you've banned. Never blocks anything",
+      "version": "0.1.0"
+    },
+    {
+      "name": "tool-guards",
+      "source": "./plugins/tool-guards",
+      "description": "Stops Claude editing files through the shell (so /rewind works), keeps its attribution out of your commits and PRs, and asks before a read that would eat a quarter of your remaining context",
+      "version": "0.1.0"
+    },
+    {
+      "name": "needs-you",
+      "source": "./plugins/needs-you",
+      "description": "Messages you on Slack when Claude has been waiting on you for a while (a finished turn, a permission prompt, a question); reply there and the session carries on",
+      "version": "0.1.0"
+    },
+    {
+      "name": "application-assistant",
+      "source": "./plugins/application-assistant",
+      "description": "Job and internship applications: a daily role scan, eligibility checks against your own profile, application packs, form filling in Chrome for you to submit, a tracker kept up to date from your inbox, and reminders",
+      "version": "0.1.0"
     }
   ]
 }
