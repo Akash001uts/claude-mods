@@ -3,15 +3,15 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Pending, Phase, Saved } from '../types'
 
-const PLUGIN = 'context-handoff'
+const PLUGIN = 'auto-handoff'
 const TOOL = 'handoff_ready'
-export const TOOL_NAME = 'mcp__context-handoff__handoff_ready'
+export const TOOL_NAME = 'mcp__auto-handoff__handoff_ready'
 const SKILL = `${PLUGIN}:wrap-up`
 
-const isAuto = atom({ plugin: 'context-handoff', key: 'isAuto' } as const, true)
-const phase = atom({ plugin: 'context-handoff', key: 'phase' } as const, 'idle')
-const hasFired = atom({ plugin: 'context-handoff', key: 'hasFired' } as const, false)
-const pending = atom({ plugin: 'context-handoff', key: 'pending' } as const, null)
+const isAuto = atom({ plugin: 'auto-handoff', key: 'isAuto' } as const, true)
+const phase = atom({ plugin: 'auto-handoff', key: 'phase' } as const, 'idle')
+const hasFired = atom({ plugin: 'auto-handoff', key: 'hasFired' } as const, false)
+const pending = atom({ plugin: 'auto-handoff', key: 'pending' } as const, null)
 
 const STATUS: Record<Exclude<Phase, 'idle'>, string> = {
   wrapping: 'Handoff: updating docs…',
@@ -31,8 +31,8 @@ let isInteractive = false
 
 // Constant for the session, so it sits after the cache boundary without busting it turn to turn.
 const guide = () => [
-  '# Context handoff',
-  'Each user message carries a `[context-handoff]` line saying how full the context window is. Use it to judge how long the session has run; do not comment on it otherwise.',
+  '# Auto handoff',
+  'Each user message carries a `[auto-handoff]` line saying how full the context window is. Use it to judge how long the session has run; do not comment on it otherwise.',
   `- When the current task reaches its natural end state (what was asked for is done and checked) and the window is past about 30%, suggest once, in one short line, wrapping up: \`/${SKILL}\` writes a handoff for a fresh session, \`/handoff\` compacts and carries on here. Never suggest it mid-task, never twice for the same task, and drop it if the user keeps going.`,
   `- A prompt from the ${PLUGIN} plugin asking for a handoff means the window crossed ${cfg.threshold}%: follow it, call \`${TOOL_NAME}\` last, then end your turn.`,
   `- This project's handoff file is \`${cfg.handoffPath}\` (relative to the project root).`,
@@ -57,9 +57,12 @@ async function reading($: EngineInterface) {
   return { percent: context.percent, tokens: context.tokens, window: context.window }
 }
 
-const handoffPrompt = (percent: number | undefined, window: number) =>
+// Fixed text and settings only: nothing read from the session goes into a prompt the mod submits.
+const handoffPrompt = (why: 'threshold' | 'asked') =>
   [
-    `The context window is at ${percent ?? '?'}% of ${short(window)}. Time to hand off before it compacts.`,
+    why === 'threshold'
+      ? `The context window has reached the ${cfg.threshold}% handoff threshold. Time to hand off before it compacts.`
+      : 'The user ran /handoff. Time to hand off.',
     `Run the \`${SKILL}\` skill in continue mode. If it isn't available, do this:`,
     '1. Update the docs this project already keeps (status, pending work, decisions) to match where things stand. Don\'t create new ones.',
     `2. Write the handoff file at \`${cfg.handoffPath}\`: goal, where things stand, next steps in order, key files, decisions and why, open questions.`,
@@ -68,9 +71,9 @@ const handoffPrompt = (percent: number | undefined, window: number) =>
     `5. Call \`${TOOL_NAME}\` with mode "continue", then end your turn. The plugin compacts and sends the kickoff prompt itself.`,
   ].join('\n')
 
-async function startHandoff($: EngineInterface, how: 'auto' | 'ask') {
-  const { percent, window } = await reading($)
-  const text = handoffPrompt(percent, window)
+async function startHandoff($: EngineInterface, how: 'auto' | 'ask', why: 'threshold' | 'asked') {
+  const { percent } = await reading($)
+  const text = handoffPrompt(why)
   if (how === 'ask') {
     // Never overwrite a half-typed prompt: say so and leave /handoff to the person.
     if ((await $.prompt.read()).text.trim()) {
@@ -173,8 +176,8 @@ export const register: Register = (on, options) => {
     const auto = cfg.mode !== 'off' && (await read($, isAuto)) ? `; handoff at ${cfg.threshold}%` : ''
     const line =
       percent === undefined
-        ? `[context-handoff] Context window: not measured yet since the start or the last compaction (${short(window)} window)${auto}.`
-        : `[context-handoff] Context window: ${percent}% used (${short(tokens ?? 0)} of ${short(window)})${auto}.`
+        ? `[auto-handoff] Context window: not measured yet since the start or the last compaction (${short(window)} window)${auto}.`
+        : `[auto-handoff] Context window: ${percent}% used (${short(tokens ?? 0)} of ${short(window)})${auto}.`
     return next({ ...e, context: [...(e.context ?? []), line] })
   })
 
@@ -184,10 +187,10 @@ export const register: Register = (on, options) => {
   })
 
   // The plugin's own tool is always in the model's list; whether it prompts is up to the person's permission rules.
-  on('tool.describe', { tool: 'mcp__context-handoff__handoff_ready' }, async ($, e, next) => ({ ...(await next(e)), isDeferred: false }))
+  on('tool.describe', { tool: /^mcp__auto-handoff__handoff_ready$/ }, async ($, e, next) => ({ ...(await next(e)), isDeferred: false }))
 
   // A regex: the typed matcher only names tools that were connected when the types were last laid.
-  on('tool.call', { tool: /^mcp__context-handoff__handoff_ready$/ }, async ($, e) => {
+  on('tool.call', { tool: /^mcp__auto-handoff__handoff_ready$/ }, async ($, e) => {
     if (e.agentId) return { deny: 'Only the main conversation hands off.' }
     const input = e as unknown as Record<string, unknown>
     const kickoff = typeof input.kickoffPrompt === 'string' ? input.kickoffPrompt.trim() : ''
@@ -248,7 +251,7 @@ export const register: Register = (on, options) => {
     }
     if (await read($, hasFired)) return done
     await update($, hasFired, () => true)
-    await startHandoff($, cfg.mode === 'ask' ? 'ask' : 'auto')
+    await startHandoff($, cfg.mode === 'ask' ? 'ask' : 'auto', 'threshold')
     return done
   })
 
@@ -299,7 +302,7 @@ export const register: Register = (on, options) => {
     if (arg !== 'now') return { text: 'Usage: /handoff [now | <percent> | on | off | status | resume], e.g. /handoff 60' }
     if ((await read($, phase)) !== 'idle') return { text: 'A handoff is already running.' }
     await update($, hasFired, () => true)
-    await startHandoff($, 'auto')
+    await startHandoff($, 'auto', 'asked')
     return { text: 'Handoff started.' }
   })
 }

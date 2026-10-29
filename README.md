@@ -8,7 +8,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | Mod | What it does | Status |
 | --- | --- | --- |
 | [context-bar](plugins/context-bar) | Always-on bar showing how full the context window is, plus your rate limits | Published in Claude's plugin directory |
-| [context-handoff](plugins/context-handoff) | Hands a long session off cleanly before it compacts | In review for the directory |
+| [auto-handoff](plugins/auto-handoff) | Hands a long session off cleanly before it compacts (was context-handoff) | In review for the directory |
 | [session-pins](plugins/session-pins) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
 | [writing-assistant](plugins/writing-assistant) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
 | [assessment-marker](plugins/assessment-marker) | Marks your uni assessments against the real rubric, with HD as the bar | New, not submitted yet |
@@ -18,7 +18,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 ```
 /plugin marketplace add Akash001uts/claude-mods
 /plugin install context-bar@akash-mods
-/plugin install context-handoff@akash-mods
+/plugin install auto-handoff@akash-mods
 /plugin install session-pins@akash-mods
 /plugin install writing-assistant@akash-mods
 /plugin install assessment-marker@akash-mods
@@ -55,7 +55,10 @@ How it works:
   of the last API call. Counting all that costs a few extra requests (same as `/context`), so it only refreshes while
   the pane is open, after each turn or when you press `r`.
 
-## context-handoff
+## auto-handoff
+
+This used to be called context-handoff. If you installed it under that name, uninstall `context-handoff@akash-mods` and
+install `auto-handoff@akash-mods`.
 
 Once a session gets long, Claude tends to get worse at keeping track of things, and auto-compact doesn't always keep
 the parts you actually need. This mod hands the work off properly instead. When the context window hits a threshold
@@ -74,7 +77,7 @@ again.
 
 It also lets Claude see how full the context is. Each prompt gets a hidden line like
 `Context window: 34% used (68.0k of 200.0k)`, and Claude's told to suggest wrapping up (once, and only when a task is
-actually finished) if the window is filling up. If you run `/context-handoff:wrap-up` yourself at the end of a session,
+actually finished) if the window is filling up. If you run `/auto-handoff:wrap-up` yourself at the end of a session,
 the kickoff prompt will be waiting in the prompt box next time you open a session in that project.
 
 Commands and settings:
@@ -83,7 +86,7 @@ Commands and settings:
   and it changes to show what step it's on while a handoff is running.
 - `/handoff` starts a handoff straight away, whatever the context level.
 - `/handoff 60` (or `/handoff at 60%`) changes when the automatic handoff starts. Anything from 5% to 95% works, and it
-  saves to the plugin's settings so it sticks between sessions.
+  saves in the plugin's own storage so it sticks between sessions.
 - `/handoff off` and `/handoff on` pause or resume the automatic handoff for the current session.
 - `/handoff status` shows the current reading and settings, and `/handoff resume` puts a saved kickoff prompt back in
   the box.
@@ -139,10 +142,10 @@ move a band. When marks come back it learns what that marker cares about.
 ## What they run and store
 
 None of them send anything outside Claude Code (writing-assistant reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
-context-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, session-pins adds your pins to
+auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, session-pins adds your pins to
 the system prompt and saves them in plugin storage, writing-assistant adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
-[context-handoff](plugins/context-handoff/README.md#what-it-runs-and-stores),
+[auto-handoff](plugins/auto-handoff/README.md#what-it-runs-and-stores),
 [session-pins](plugins/session-pins/README.md#what-it-runs-and-stores),
 [writing-assistant](plugins/writing-assistant/README.md#what-it-runs-and-stores),
 [assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores).

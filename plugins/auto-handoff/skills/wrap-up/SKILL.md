@@ -1,6 +1,6 @@
 ---
 name: wrap-up
-description: Wrap up a session cleanly. Updates the project's docs, writes a handoff file, and drafts a compaction prompt and a kickoff prompt for the next stretch of work. Use when a task reaches its natural end and the context window is getting full, when the user says "wrap up", "hand off", "let's stop here" or "start a fresh session", or when the context-handoff plugin asks for a handoff.
+description: Wrap up a session cleanly. Updates the project's docs, writes a handoff file, and drafts a compaction prompt and a kickoff prompt for the next stretch of work. Use when a task reaches its natural end and the context window is getting full, when the user says "wrap up", "hand off", "let's stop here" or "start a fresh session", or when the auto-handoff plugin asks for a handoff.
 argument-hint: "[continue|end]"
 ---
 
@@ -9,7 +9,7 @@ argument-hint: "[continue|end]"
 Two modes:
 
 - **end** (the default when the user runs `/wrap-up`): the session is finishing. The kickoff prompt is for a fresh session.
-- **continue** (when the context-handoff plugin asks, or the argument is `continue`): the conversation compacts and carries on
+- **continue** (when the auto-handoff plugin asks, or the argument is `continue`): the conversation compacts and carries on
   straight away. The kickoff prompt is sent automatically after compaction.
 
 Work through the steps in order and keep each one short. This runs when the context is already full, so don't re-read
@@ -24,7 +24,7 @@ docs that this session's work didn't affect.
 
 ## 2. Write the handoff file
 
-Write it to the path the `[context-handoff]` guide names (default `.claude/handoff.md`, relative to the project root),
+Write it to the path the `[auto-handoff]` guide names (default `.claude/handoff.md`, relative to the project root),
 overwriting the previous handoff. Create the folder if it's missing. Use this shape:
 
 ```markdown
@@ -74,7 +74,7 @@ Keep it under about 120 words.
 
 ## 5. Hand over
 
-Call the `mcp__context-handoff__handoff_ready` tool last, with `mode` (`continue` or `end`), `handoffPath`,
+Call the `mcp__auto-handoff__handoff_ready` tool last, with `mode` (`continue` or `end`), `handoffPath`,
 `kickoffPrompt`, and in continue mode `compactInstructions`.
 
 - **continue**: then end your turn with one line saying the handoff is written. Don't make any more tool calls. The

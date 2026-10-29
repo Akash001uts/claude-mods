@@ -73,7 +73,7 @@ test('every prompt carries the context reading for Claude', async ($, on) => {
   const seen = engine(on, { percent: 34 })
   await start($)
   await $.prompt.submit({ text: 'hello', wait: false, origin: { kind: 'composer' } })
-  expect(seen.contexts.at(-1)).toEqual(['[context-handoff] Context window: 34% used (68.0k of 200.0k); handoff at 50%.'])
+  expect(seen.contexts.at(-1)).toEqual(['[auto-handoff] Context window: 34% used (68.0k of 200.0k); handoff at 50%.'])
 })
 
 test('crossing the threshold sends the handoff prompt once', async ($, on) => {
@@ -91,8 +91,12 @@ test('crossing the threshold sends the handoff prompt once', async ($, on) => {
 
   await turn($)
   expect(seen.submitted).toHaveLength(1)
-  expect(seen.submitted[0]).toContain('context-handoff:wrap-up')
+  expect(seen.submitted[0]).toContain('auto-handoff:wrap-up')
   expect(seen.submitted[0]).toContain(TOOL_NAME)
+  // Nothing read from the session goes into the prompt it submits: the threshold is a setting, not the reading.
+  expect(seen.submitted[0]).toContain('50% handoff threshold')
+  expect(seen.submitted[0]).not.toContain('52%')
+  expect(seen.submitted[0]).not.toContain('200.0k')
 
   // The wrapping turn ends without the tool call: one toast, then no re-firing.
   await turn($)

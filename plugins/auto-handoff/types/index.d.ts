@@ -6,7 +6,7 @@ export type Saved = { kickoff: string; path: string; savedAt: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    'context-handoff': {
+    'auto-handoff': {
       isAuto: boolean
       phase: Phase
       // Set once the threshold has fired, so a skipped or cancelled handoff doesn't fire every turn.

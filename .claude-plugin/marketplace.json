@@ -14,10 +14,10 @@
       "version": "0.4.4"
     },
     {
-      "name": "context-handoff",
-      "source": "./plugins/context-handoff",
+      "name": "auto-handoff",
+      "source": "./plugins/auto-handoff",
       "description": "Hands a long session off cleanly: at a context threshold Claude updates the docs and writes a handoff, the session compacts with its instructions, then a kickoff prompt carries on. Gives Claude a live context reading and a /wrap-up skill",
-      "version": "0.1.3"
+      "version": "0.2.0"
     },
     {
       "name": "session-pins",
