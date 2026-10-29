@@ -25,8 +25,6 @@ type Subject = { name: string; path: string }
 
 let cwd = ''
 let subject: Subject | undefined
-// The subject.json path last found and its mtime:size, so a compose only re-reads when setup changed it.
-let subjectStamp: string | undefined
 
 const slashes = (path: string) => path.replace(/\\/g, '/').replace(/\/+$/, '')
 const parentOf = (path: string) => {
@@ -41,19 +39,13 @@ async function findSubject($: EngineInterface, from: string) {
   for (let i = 0; dir && i < MAX_DEPTH; i++, dir = parentOf(dir)) {
     const file = `${dir}/${DIR}/${SUBJECT_FILE}`
     const stat = await $.fs.stat(file).catch(() => undefined)
-    if (stat?.kind === 'file') return { dir, file, stamp: `${file}:${stat.mtimeMs}:${stat.size}` }
+    if (stat?.kind === 'file') return dir
   }
   return undefined
 }
 
-// subject.json is written by the setup skill. Only its name is read here; a file that doesn't parse still counts.
-export function subjectName(json: string, dir: string) {
-  try {
-    const name = (JSON.parse(json) as { name?: unknown }).name
-    if (typeof name === 'string' && name.trim()) return name.trim().slice(0, 120)
-  } catch {}
-  return baseName(dir)
-}
+// The mod never reads subject.json (the skills do): a subject goes by its folder's name.
+export const subjectName = (dir: string) => baseName(dir).slice(0, 120)
 
 async function knownSubjects($: EngineInterface): Promise<Subject[]> {
   const known = await $.store.get(KNOWN).catch(() => undefined)
@@ -66,20 +58,13 @@ async function remember($: EngineInterface, found: Subject) {
   await $.store.set(KNOWN, [found, ...known].slice(0, MAX_KNOWN))
 }
 
-// Cheap enough before every request: a stat per level, a read only when subject.json changed.
+// Cheap enough before every request: a stat per level.
 async function refreshSubject($: EngineInterface) {
   if (!cwd) return
-  const found = await findSubject($, cwd)
-  if (!found) {
-    subject = undefined
-    subjectStamp = undefined
-    return
-  }
-  if (found.stamp === subjectStamp) return
-  const json = await $.fs.read(found.file).catch(() => '')
-  subject = { name: subjectName(json, found.dir), path: found.dir }
-  subjectStamp = found.stamp
-  await remember($, subject)
+  const dir = await findSubject($, cwd)
+  if (dir === subject?.path) return
+  subject = dir ? { name: subjectName(dir), path: dir } : undefined
+  if (subject) await remember($, subject)
 }
 
 // The saved choice, or the default folder when there's none.
@@ -119,7 +104,7 @@ const skill = (name: string) => `\`${PLUGIN}:${name}\``
 export function guide(active: Subject | undefined, known: Subject[], save: string) {
   const where = active
     ? [
-        `Active subject: ${active.name}, folder \`${active.path}\` (the mod's own files are in \`${active.path}/${DIR}/\`).`,
+        `Active subject: ${active.name}, folder \`${active.path}\` (the mod's own files are in \`${active.path}/${DIR}/\`; its full name and assessments are in \`${SUBJECT_FILE}\` there).`,
         `Use only this subject's folder. Never read another subject's materials, profile or reviews.`,
       ]
     : [

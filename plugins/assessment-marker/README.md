@@ -59,9 +59,9 @@ To install:
   to run the matching skill. The prompt is fixed text: that request and the skill's name, nothing else. Nothing the
   mod reads (the subject file, your files, plugin storage) ever goes into a prompt it submits. Nothing is submitted
   unless you run one of them.
-- **What it reads.** To find your subject, it checks the folder Claude Code is open in, and up to 7 folders above
-  it, for `.assessment-marker/subject.json`, and reads only that file's subject name. It checks the file's size and
-  modified time whenever Claude Code builds its system prompt and re-reads it only when it changed.
+- **What it reads.** Nothing. To find your subject, it checks whether `.assessment-marker/subject.json` exists in the
+  folder Claude Code is open in, or up to 7 folders above it, whenever Claude Code builds its system prompt. It never
+  opens the file: the subject goes by its folder's name, and Claude reads the file itself while marking.
 - **What it adds to the system prompt.** One section: the active subject and its folder (or the subjects you've set
   up, if you're outside one), where reviews are kept, and which skill to use for which request.
 - **What it stores.** In plugin storage: whether it's asked the first-run question, your save choice, and the names
@@ -86,7 +86,7 @@ The mod is one file, `hooks/register.ts`. It hooks these events and nothing else
 - `command.run` (for `/mark` only): checks the argument and submits the fixed prompt for that stage. Any other
   argument just shows the usage line.
 
-It never runs commands or processes, writes your files, makes network requests, registers tools or answers tool
+It never runs commands or processes, reads or writes your files, makes network requests, registers tools or answers tool
 calls.
 
 ## Licence

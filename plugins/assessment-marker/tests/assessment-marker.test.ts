@@ -32,11 +32,6 @@ function engine(on: On, world: World): Seen {
     if (text === undefined) throw new Error('ENOENT')
     return { value: { kind: 'file' as const, size: text.length, mtimeMs: 1, isLink: false } }
   })
-  on('fs.read', ($, e) => {
-    const text = find(e.path)
-    if (text === undefined) throw new Error('ENOENT')
-    return { value: text }
-  })
   on('session.id', () => ({ value: 's1' }))
   on('tool.call', { tool: 'AskUserQuestion' }, ($, e) => {
     const q = e.questions[0]!
@@ -111,9 +106,9 @@ test('a session inside a subject folder names that subject and seals it off', as
   const seen = engine(on, { answer: null, files: { [SUBJECT_FILE]: '{"name": "31250 Introduction to Data Analytics"}' } })
   await start($, `${SUBJECT}\\A2\\drafts`)
   const text = await guide($)
-  expect(text).toMatch(/Active subject: 31250 Introduction to Data Analytics, folder `C:\/uni\/31250 IDA`/)
+  expect(text).toMatch(/Active subject: 31250 IDA, folder `C:\/uni\/31250 IDA`/)
   expect(text).toMatch(/Never read another subject/)
-  expect(seen.store.subjects).toEqual([{ name: '31250 Introduction to Data Analytics', path: SUBJECT }])
+  expect(seen.store.subjects).toEqual([{ name: '31250 IDA', path: SUBJECT }])
 })
 
 test('outside any subject the guide lists the known ones', async ($, on) => {
@@ -144,10 +139,8 @@ test('the guide carries the save choice, the HD bar and the tight trigger', asyn
   expect(text).toMatch(/don't ask permission first/)
 })
 
-test('subjectName falls back to the folder name', () => {
-  expect(subjectName('{"name": " 31265 CITP "}', 'C:/uni/x')).toBe('31265 CITP')
-  expect(subjectName('not json', 'C:/uni/31265 CITP')).toBe('31265 CITP')
-  expect(subjectName('{}', 'C:/uni/TD')).toBe('TD')
+test('a subject goes by its folder name', () => {
+  expect(subjectName('C:/uni/31265 CITP')).toBe('31265 CITP')
 })
 
 test('/mark routes each stage to its skill', async ($, on) => {
