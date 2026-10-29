@@ -20,10 +20,10 @@
       "version": "0.2.0"
     },
     {
-      "name": "session-pins",
-      "source": "./plugins/session-pins",
+      "name": "pinned-notes",
+      "source": "./plugins/pinned-notes",
       "description": "Pin notes to a session: /pin keeps them on show above the prompt and in Claude's system prompt, so they hold through compaction, come back on resume and can follow you into your next session",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "writing-assistant",

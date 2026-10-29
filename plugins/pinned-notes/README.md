@@ -1,4 +1,4 @@
-# session-pins
+# pinned-notes
 
 Sometimes there's one thing I need Claude to remember for the whole session, like "use Australian spelling", "don't
 touch the tests folder" or the name of the branch I'm on. If I just say it once, it scrolls away, and after a compact
@@ -48,6 +48,27 @@ Up to 20 pins, each up to 1000 characters.
   and deletes older ones. Unpinning everything deletes that session's entry and the copy; "Unpin them" deletes the
   copy.
 - It doesn't run commands, call tools, change your prompts or send anything outside Claude Code.
+
+## What each hook does
+
+The mod is one file, `hooks/register.tsx`. It hooks these events and nothing else:
+
+- `session.start`: registers `/pin` and `/unpin`, loads the session's own pins (on a resume or reload), and if there
+  are none, asks whether to keep your last session's pins from this project.
+- `classic.SessionStart` (only when the source is `clear`): `/clear` starts a new session without `session.start`, so
+  this asks the same question after a `/clear`. It doesn't change anything the event carries.
+- `prompt.submit`: reads the text of a prompt you typed (not slash commands or other tools' messages) and keeps the
+  latest one in memory for `/pin` on its own. It passes the prompt on unchanged.
+- `prompt.compose`: while anything is pinned, adds one section listing your pins at the end of the system prompt.
+  It leaves the other sections, your settings, instructions and tool descriptions as they are.
+- `command.run` (for `/pin` and `/unpin` only): pins, lists, hides, shows or unpins notes.
+- `ui.render` for the area above the prompt: draws the pins. Anything else drawn there by Claude Code or other plugins
+  still shows.
+
+It never runs commands or processes, reads or writes your files, makes network requests, or answers tool calls.
+
+This mod used to be called session-pins (the directory flagged that name as too close to another listing). Pins saved
+under the old name don't carry over.
 
 ## Licence
 

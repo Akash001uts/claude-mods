@@ -2,7 +2,7 @@ export type Pin = { text: string; pinnedAt: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    'session-pins': {
+    'pinned-notes': {
       pins: Pin[]
       // Hides the band only; Claude still sees the pins.
       isHidden: boolean

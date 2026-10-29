@@ -9,7 +9,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | --- | --- | --- |
 | [context-bar](plugins/context-bar) | Always-on bar showing how full the context window is, plus your rate limits | Published in Claude's plugin directory |
 | [auto-handoff](plugins/auto-handoff) | Hands a long session off cleanly before it compacts (was context-handoff) | In review for the directory |
-| [session-pins](plugins/session-pins) | Pins notes to a session so they stay on screen and Claude keeps to them | New, not submitted yet |
+| [pinned-notes](plugins/pinned-notes) | Pins notes to a session so they stay on screen and Claude keeps to them (was session-pins) | In review for the directory |
 | [writing-assistant](plugins/writing-assistant) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
 | [assessment-marker](plugins/assessment-marker) | Marks your uni assessments against the real rubric, with HD as the bar | New, not submitted yet |
 
@@ -19,7 +19,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin marketplace add Akash001uts/claude-mods
 /plugin install context-bar@akash-mods
 /plugin install auto-handoff@akash-mods
-/plugin install session-pins@akash-mods
+/plugin install pinned-notes@akash-mods
 /plugin install writing-assistant@akash-mods
 /plugin install assessment-marker@akash-mods
 ```
@@ -95,7 +95,7 @@ Commands and settings:
 - It only hands off from the main conversation, and only after a turn finishes normally. If you interrupt a turn it
   cancels, and Claude Code's own auto-compact never triggers the kickoff prompt.
 
-## session-pins
+## pinned-notes
 
 Pins a note to the session. `/pin Use Australian spelling` puts it above the prompt with a 📌, and Claude gets it in
 its system prompt as a standing instruction for the rest of the session.
@@ -142,11 +142,11 @@ move a band. When marks come back it learns what that marker cares about.
 ## What they run and store
 
 None of them send anything outside Claude Code (writing-assistant reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
-auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, session-pins adds your pins to
+auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, pinned-notes adds your pins to
 the system prompt and saves them in plugin storage, writing-assistant adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [auto-handoff](plugins/auto-handoff/README.md#what-it-runs-and-stores),
-[session-pins](plugins/session-pins/README.md#what-it-runs-and-stores),
+[pinned-notes](plugins/pinned-notes/README.md#what-it-runs-and-stores),
 [writing-assistant](plugins/writing-assistant/README.md#what-it-runs-and-stores),
 [assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores).
 
