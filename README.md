@@ -196,6 +196,7 @@ Slack through the claude.ai Slack connector. Reply in Slack and the session carr
 
 **Why it's useful:** no more coming back to a session that sat on a permission prompt for an hour.
 
+- Permissions are still yours to approve on your machine; a "no" from Slack stops the command.
 - Only your own Slack user's replies count. Without Slack, it falls back to Claude Code's push notification.
 - It also notices commands you approve every time and suggests an allow rule.
 
