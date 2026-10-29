@@ -65,6 +65,8 @@ const written = (e: { tool: string; [k: string]: unknown }) => {
   if (e.tool === 'NotebookEdit') return String(e.new_source ?? '')
   return ''
 }
+// What tests and builds write themselves (output, caches, coverage, git's own files) isn't a change to verify.
+const GENERATED = /[\\/](\.git|node_modules|dist|build|out|target|coverage|\.next|\.cache|__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache|\.venv|venv|bin|obj)[\\/]|\.(pyc|log|tsbuildinfo)$/i
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 // Commands that write files count as changes too (Claude through the shell, a formatter, a generator).
@@ -196,7 +198,7 @@ export const register: Register = on => {
   })
 
   on('classic.FileChanged', async ($, e, next) => {
-    changed.add(e.file_path)
+    if (!GENERATED.test(e.file_path)) changed.add(e.file_path)
     return next(e)
   })
 

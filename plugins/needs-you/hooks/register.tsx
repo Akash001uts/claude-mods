@@ -35,7 +35,11 @@ let hasTimer = false
 
 const get = async ($: EngineInterface) => ({ ...DEFAULTS, ...((await $.store.get('settings')) as Partial<Settings> | undefined) })
 const put = async ($: EngineInterface, s: Settings) => $.store.set('settings', s)
-const keyOf = (tool: string, input: unknown) => `${tool}\n${JSON.stringify(input)}`
+// The call a Slack "yes" allows once. For the shell, the command alone: a rerun's description and timeout often differ.
+const keyOf = (tool: string, input: unknown) => {
+  const command = (input as { command?: unknown } | undefined)?.command
+  return `${tool}\n${(tool === 'Bash' || tool === 'PowerShell') && typeof command === 'string' ? command : JSON.stringify(input)}`
+}
 export const ruleOf = (tool: string, input: unknown) => {
   const command = (input as { command?: unknown } | undefined)?.command
   return (tool === 'Bash' || tool === 'PowerShell') && typeof command === 'string' ? `${tool}(${command})` : tool

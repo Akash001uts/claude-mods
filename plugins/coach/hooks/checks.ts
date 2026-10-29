@@ -41,7 +41,8 @@ const VERIFY = [
   /\bgo\s+(test|build|run)\b/,
   /\bdotnet\s+(test|build|run)\b/,
   /\b(mvn|gradle|gradlew|make|cmake\s+--build|ninja|bazel)\b/,
-  /\b(python|python3|py|node|deno|ruby|php|java)\s+\S/,
+  // Running a file; `python - <<EOF` (code typed in on the spot) doesn't count.
+  /\b(python|python3|py|node|deno|ruby|php|java)\s+(?!-(\s|$)|-[ce]\b)\S/,
   /\bclaude\s+plugin\s+(test|validate)\b/,
   /(^|[\s;&|])\.\/\S+/,
 ]

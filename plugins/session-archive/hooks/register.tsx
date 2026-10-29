@@ -138,6 +138,14 @@ async function bigCopy($: EngineInterface, from: string, to: string) {
 
 type CopyOptions = { isCurrent: boolean; isFinal: boolean }
 
+// A copy this session already has in the project's folder (found by the id at the end of its name), so a session
+// keeps one file even if its index entry went missing.
+async function existing($: EngineInterface, dir: string, id: string) {
+  const end = ` ${id.slice(0, 8)}`
+  const found = (await $.fs.list(dir).catch(() => [])).find(f => f.kind === 'file' && /\.(jsonl|md)$/.test(f.name) && f.name.replace(/\.(jsonl|md)$/, '').endsWith(end))
+  return found ? `${dir}/${found.name.replace(/\.(jsonl|md)$/, '')}` : undefined
+}
+
 // Copies one session into the archive and updates the index. Every copy of a session overwrites that session's own
 // files, so the archive holds one copy per session, and the last one made covers all of it.
 export async function copy($: EngineInterface, source: string, sessionId: string, o: CopyOptions) {
@@ -179,7 +187,7 @@ export async function copy($: EngineInterface, source: string, sessionId: string
   const project = projectOf(root)
   const started = p?.started || was?.started || stat.mtimeMs
   // The file name is set at the first copy and kept: a later title goes in the index and the Markdown heading.
-  const file = s.folder ? was?.file || `${s.folder}/${safe(project)}/${dayOf(started)} ${safe(named.title)} ${id.slice(0, 8)}` : ''
+  const file = s.folder ? was?.file || (await existing($, `${s.folder}/${safe(project)}`, id)) || `${s.folder}/${safe(project)}/${dayOf(started)} ${safe(named.title)} ${id.slice(0, 8)}` : ''
   if (file) {
     if (s.format !== 'md') {
       if (isBig) await bigCopy($, source, `${file}.jsonl`)

@@ -156,6 +156,18 @@ test('later copies overwrite the same files, so the archive holds one copy per s
   expect(w.files.get(copies.find(k => k.endsWith('.jsonl'))!)).toContain('now the tests')
 })
 
+test('a lost index entry still leaves one copy per session', async ($, on) => {
+  const w = engine(on)
+  await start($)
+  await stop($)
+  await w.clock.settle()
+  w.files.set(`${ARCHIVE}/index-desk.json`, '{}')
+  await w.clock.advance(4 * 60_000)
+  await stop($)
+  await w.clock.settle()
+  expect(archived(w).length).toBe(2)
+})
+
 test('the title goes into Claude Code\'s own session list once', async ($, on) => {
   const w = engine(on)
   await start($)

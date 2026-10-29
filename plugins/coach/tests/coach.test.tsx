@@ -60,6 +60,8 @@ test('verification, phrases, comments and language', async () => {
   expect(verifies('npm test')).toBe(true)
   expect(verifies('cargo build --release')).toBe(true)
   expect(verifies('git status')).toBe(false)
+  expect(verifies('python app.py')).toBe(true)
+  expect(verifies("python - <<'EOF'\nopen('x', 'w').write('y')\nEOF")).toBe(false)
   expect(banned("You’re absolutely right, let's go", ["You're absolutely right"])).toEqual(["You're absolutely right"])
   expect(banned('a belt-and-suspenders-ish idea', ['belt-and-suspenders'])).toEqual([])
   expect(commentRate('// a\n// b\nx()\ny()\nz()\nw()')).toBe(5)

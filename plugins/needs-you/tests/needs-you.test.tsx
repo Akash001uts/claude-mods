@@ -149,7 +149,7 @@ test('a permission reply of yes stops the turn, tells Claude, and allows that ca
   await wait(w, 0)
   expect(w.aborted).toEqual(['t9'])
   expect(w.submitted[0]?.text).toContain('approved `npm test` from Slack')
-  expect((await $.tool.check({ tool: 'Bash', input: { command: 'npm test' }, tool_use_id: 'c2', approver: 'person' })).decision).toBe('allow')
+  expect((await $.tool.check({ tool: 'Bash', input: { command: 'npm test', description: 'Run the tests again' }, tool_use_id: 'c2', approver: 'person' })).decision).toBe('allow')
   expect((await $.tool.check({ tool: 'Bash', input: { command: 'npm test' }, tool_use_id: 'c3', approver: 'person' })).decision).toBe('ask')
 })
 
