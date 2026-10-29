@@ -67,13 +67,23 @@ fill in at setup, and it lives on your machine.
   your inbox (only through your own connector, only application emails). It writes packs in your applications folder,
   your tracker, the digest and seen list, and the profile.
 - **What it sends.** Postings and resume text go to Claude (it's doing the checking and tailoring). Nothing goes to
-  employers, ever: form filling happens in your own browser, and you submit.
+  employers until you submit: form filling happens in your own browser, and you submit.
+- **Services its skills use, besides your inbox connector.** These are the only places data goes outside Claude Code:
+  - Company job boards (Greenhouse, Lever, Ashby, Workday, careers-site APIs), country job sites with open APIs and
+    web search, during the scan. Only searches go out (company names, role types, places), never your name or resume.
+  - Claude Code's scheduled cloud routine (`/schedule`, Anthropic's cloud), only if you say yes at setup. Its prompt
+    holds the parts of your profile the scan needs (role types, places, target companies, dates), because the
+    routine can't read your files. It emails you the digest through your own inbox connector.
+  - Employer application pages, only when you run `/apply fill`: Claude types your details into the form in your own
+    Chrome, asks before entering personal details, never types passwords or ID numbers, and never submits.
 - **What it creates.** One scheduled cloud routine, at setup, only if you say yes.
 - **What it submits as a prompt.** Fixed text naming one of its skills: after you say yes to setup, after an `/apply`
   command, or at session start in your applications folder when the day's scan didn't run. Each one is written out in
   `hooks/register.tsx` (`NUDGE`), with only your `/apply` arguments added.
 - **What it asks.** Whether to set up, once.
 - **What it stores.** That it already offered setup, in Claude Code's plugin storage.
+
+[Privacy](PRIVACY.md): what it reads and stores, where, who it's shared with and how to delete it.
 
 ## What each hook does
 
