@@ -10,11 +10,11 @@ export const BOTH = 'Claude and me'
 const DEFAULTS: Settings = { loop: false, done: false, style: false, isLoud: false, threshold: 1, fix: 'headsup', unbanned: [], bans: [] }
 
 const LOOP_NOTE =
-  'coach: This is the same error as before your last fix. Stop editing. Explain what is actually going wrong, give two different approaches, then pick one.'
+  'course-correct: This is the same error as before your last fix. Stop editing. Explain what is actually going wrong, give two different approaches, then pick one.'
 const REDO_NOTE =
-  'coach: You have made this exact edit to this file before, so you are going in circles. Stop editing. Explain what is actually going wrong, give two different approaches, then pick one.'
+  'course-correct: You have made this exact edit to this file before, so you are going in circles. Stop editing. Explain what is actually going wrong, give two different approaches, then pick one.'
 const DONE_NOTE =
-  'coach: You said this works, but nothing has run since the files changed. Run it (tests, a build or the program itself), or say clearly that it is untested.'
+  'course-correct: You said this works, but nothing has run since the files changed. Run it (tests, a build or the program itself), or say clearly that it is untested.'
 
 // What this session has seen. Module variables: a reload starts them over, which only means a missed nudge.
 const errorsSeen = new Map<string, { edits: number; repeats: number }>()
@@ -32,7 +32,7 @@ const get = async ($: EngineInterface) => ({ ...DEFAULTS, ...((await $.store.get
 const put = async ($: EngineInterface, s: Settings) => $.store.set('settings', s)
 
 const tell = (s: Settings, $: EngineInterface, toast: string) => {
-  if (s.isLoud) $.ui.toast(`coach: ${toast}`)
+  if (s.isLoud) $.ui.toast(`course-correct: ${toast}`)
 }
 
 const phrases = (s: Settings) => [...BUILT_IN.filter(p => !s.unbanned.includes(p.toLowerCase())), ...s.bans]
@@ -74,13 +74,13 @@ const WRITES = /(^|[^<2&])>{1,2}\s*(?!&|\/dev\/null|\$null|nul\b)\S|\b(sed|perl)
 
 async function setup($: EngineInterface) {
   await $.store.set('asked', true)
-  const picked = await $.ui.ask('Which parts of coach should be on? It only adds notes; it never blocks or undoes anything. /coach turns parts on or off later.', {
+  const picked = await $.ui.ask('Which parts of course-correct should be on? It only adds notes; it never blocks or undoes anything. /coach turns parts on or off later.', {
     header: 'Coach',
     options: [...PARTS],
     multiSelect: true,
   })
   const chosen = picked.split(',').map(p => p.trim())
-  const who = await $.ui.ask('Who should see coach\'s notes?', { header: 'Notes', options: [ONLY_CLAUDE, BOTH] })
+  const who = await $.ui.ask('Who should see course-correct\'s notes?', { header: 'Notes', options: [ONLY_CLAUDE, BOTH] })
   const s: Settings = {
     ...(await get($)),
     loop: chosen.includes(PARTS[0]),
@@ -89,7 +89,7 @@ async function setup($: EngineInterface) {
     isLoud: who === BOTH,
   }
   await put($, s)
-  $.ui.log(`coach: ${status(s)}\n/coach shows the commands.`)
+  $.ui.log(`course-correct: ${status(s)}\n/coach shows the commands.`)
 }
 
 const status = (s: Settings) => {
@@ -119,7 +119,7 @@ async function command($: EngineInterface, args: string) {
   const quoted = rest.replace(/^["'“”]|["'“”]$/g, '').trim()
   const parts = { loop: 'loop', done: 'done', style: 'style' } as const
   const w = word.toLowerCase()
-  if (!w || w === 'help') return `coach: ${status(s)}\n\n${HELP}`
+  if (!w || w === 'help') return `course-correct: ${status(s)}\n\n${HELP}`
   if (w === 'setup') {
     void setup($).catch(() => {})
     return 'Asking the setup questions.'
@@ -136,7 +136,7 @@ async function command($: EngineInterface, args: string) {
   }
   if (w === 'quiet' || w === 'loud') {
     await put($, { ...s, isLoud: w === 'loud' })
-    return w === 'loud' ? 'You see coach\'s notes too (as toasts).' : 'Only Claude sees coach\'s notes.'
+    return w === 'loud' ? 'You see course-correct\'s notes too (as toasts).' : 'Only Claude sees course-correct\'s notes.'
   }
   if (w === 'rewrite' || w === 'headsup') {
     await put($, { ...s, fix: w, toldRewrite: true })
@@ -229,10 +229,10 @@ export const register: Register = on => {
         if (s.style) {
           const code = written(input)
           const slips = banned(code, phrases(s))
-          if (slips.length) notes.push(`coach: The code you just wrote uses ${slips.map(p => `"${p}"`).join(', ')}, which the user asked you not to use. Take it out.`)
+          if (slips.length) notes.push(`course-correct: The code you just wrote uses ${slips.map(p => `"${p}"`).join(', ')}, which the user asked you not to use. Take it out.`)
           const rate = s.comments === undefined ? undefined : commentRate(code)
           if (rate !== undefined && s.comments !== undefined && rate > s.comments)
-            notes.push(`coach: That edit has about ${rate.toFixed(1)} comment lines per 10 lines of code; the user allows at most ${s.comments}. Cut the comments down to what is not obvious from the code.`)
+            notes.push(`course-correct: That edit has about ${rate.toFixed(1)} comment lines per 10 lines of code; the user allows at most ${s.comments}. Cut the comments down to what is not obvious from the code.`)
           if (slips.length || (rate !== undefined && s.comments !== undefined && rate > s.comments)) tell(s, $, 'code slipped from your style rules, told Claude')
         }
       }
@@ -261,7 +261,7 @@ export const register: Register = on => {
   })
 
   on('prompt.submit', async ($, e, next) => {
-    if (e.origin.kind === 'plugin' && e.origin.name === 'coach') isNudgeTurn = true
+    if (e.origin.kind === 'plugin' && e.origin.name === 'course-correct') isNudgeTurn = true
     else if (e.origin.kind === 'composer') isNudgeTurn = false
     if (pending.length === 0) return next(e)
     const notes = pending
@@ -300,13 +300,13 @@ export const register: Register = on => {
         ].join(', and ')
         if (s.fix === 'rewrite') {
           tell(s, $, 'a reply slipped from your style rules, asked Claude to redo it')
-          void $.prompt.submit({ text: `coach: Your last reply ${what}. Write it again without that, changing nothing else.` }).catch(() => {})
+          void $.prompt.submit({ text: `course-correct: Your last reply ${what}. Write it again without that, changing nothing else.` }).catch(() => {})
         } else {
-          pending.push(`coach: Your last reply ${what}. Avoid that from now on.`)
+          pending.push(`course-correct: Your last reply ${what}. Avoid that from now on.`)
           tell(s, $, 'a reply slipped from your style rules, Claude gets a heads-up')
           if (!s.toldRewrite) {
             await put($, { ...s, toldRewrite: true })
-            $.ui.log('coach: Claude gets a heads-up when a reply slips from your style rules. /coach rewrite has it redo the reply at once instead.')
+            $.ui.log('course-correct: Claude gets a heads-up when a reply slips from your style rules. /coach rewrite has it redo the reply at once instead.')
           }
         }
       }

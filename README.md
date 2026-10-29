@@ -13,7 +13,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 | [voice-profile](plugins/voice-profile) | Learns how you write once, then drafts messages that sound like you | New, not submitted yet |
 | [assessment-marker](plugins/assessment-marker) | Marks your uni assessments against the real rubric, with HD as the bar | New, not submitted yet |
 | [session-archive](plugins/session-archive) | Keeps a copy of every session before the 30-day cleanup, with titles, search and a stats pane | New, not submitted yet |
-| [coach](plugins/coach) | Notes for Claude when it loops on the same error, says "done" without checking, or slips into habits you've banned | New, not submitted yet |
+| [course-correct](plugins/course-correct) | Notes for Claude when it loops on the same error, says "done" without checking, or slips into habits you've banned | New, not submitted yet |
 | [tool-guards](plugins/tool-guards) | No shell file edits (so /rewind works), no attribution in your commits, asks before huge reads | New, not submitted yet |
 | [needs-you](plugins/needs-you) | Slack DM when Claude has been waiting on you; reply there to carry on | New, not submitted yet |
 | [application-assistant](plugins/application-assistant) | Job and internship applications: role scan, eligibility checks, packs, form filling, tracker, reminders | New, not submitted yet |
@@ -28,7 +28,7 @@ myself. They're small, but they've made my sessions a lot less messy, so I figur
 /plugin install voice-profile@akash-mods
 /plugin install assessment-marker@akash-mods
 /plugin install session-archive@akash-mods
-/plugin install coach@akash-mods
+/plugin install course-correct@akash-mods
 /plugin install tool-guards@akash-mods
 /plugin install needs-you@akash-mods
 /plugin install application-assistant@akash-mods
@@ -168,12 +168,12 @@ terminal and the desktop app, without losing old days.
 - Search by meaning uses a small Haiku call over titles and summaries; `--plain` is free.
 - `/sessions off` stops it for one project.
 
-## coach
+## course-correct
 
 Watches Claude's turns and adds a short note when it goes wrong: going round in circles on the same error, saying
 something works when nothing has run since the files changed, or using phrases and comment styles you've banned.
 
-**Why it's useful:** the "you're absolutely right, fixed!" loop. Coach catches the second identical error and tells
+**Why it's useful:** the "you're absolutely right, fixed!" loop. course-correct catches the second identical error and tells
 Claude to stop and rethink, and asks it to run the tests before it says done.
 
 - It never blocks anything; you pick which parts are on and whether you see the notes too.
@@ -214,14 +214,14 @@ setup and stays on your machine.
 
 Only needs-you sends anything outside Claude Code (its pings, to your own Slack DM through the claude.ai connector), and only session-archive runs a process (the system's copy command, for a transcript over 4 MiB). voice-profile reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors. context-bar only reads the same usage numbers `/context` shows,
 auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, pinned-notes adds your pins to
-the system prompt and saves them in plugin storage, voice-profile adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. session-archive copies transcripts into the folder you choose and sends titles and summaries through small Haiku calls, coach adds notes for Claude and makes one small yes/no call for its done-check, tool-guards refuses or rewrites some commands, needs-you sends pings to your own Slack DM through the claude.ai connector, and application-assistant reads your inbox and resumes only through its skills, when you ask. Each plugin's own README has
+the system prompt and saves them in plugin storage, voice-profile adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. session-archive copies transcripts into the folder you choose and sends titles and summaries through small Haiku calls, course-correct adds notes for Claude and makes one small yes/no call for its done-check, tool-guards refuses or rewrites some commands, needs-you sends pings to your own Slack DM through the claude.ai connector, and application-assistant reads your inbox and resumes only through its skills, when you ask. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
 [auto-handoff](plugins/auto-handoff/README.md#what-it-runs-and-stores),
 [pinned-notes](plugins/pinned-notes/README.md#what-it-runs-and-stores),
 [voice-profile](plugins/voice-profile/README.md#what-it-runs-and-stores),
 [assessment-marker](plugins/assessment-marker/README.md#what-it-runs-and-stores),
 [session-archive](plugins/session-archive/README.md#what-it-runs-and-stores),
-[coach](plugins/coach/README.md#what-it-runs-and-stores),
+[course-correct](plugins/course-correct/README.md#what-it-runs-and-stores),
 [tool-guards](plugins/tool-guards/README.md#what-it-runs-and-stores),
 [needs-you](plugins/needs-you/README.md#what-it-runs-and-stores),
 [application-assistant](plugins/application-assistant/README.md#what-it-runs-and-stores).

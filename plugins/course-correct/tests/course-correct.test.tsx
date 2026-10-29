@@ -113,7 +113,7 @@ test('done without running anything gets one check and a follow-up', async ($, o
   expect(w.classified.length).toBe(1)
   expect(w.submitted[0]).toContain('nothing has run since the files changed')
   // Coach's own follow-up turn isn't checked again.
-  await $.prompt.submit({ text: w.submitted[0]!, origin: { kind: 'plugin', name: 'coach' }, wait: false })
+  await $.prompt.submit({ text: w.submitted[0]!, origin: { kind: 'plugin', name: 'course-correct' }, wait: false })
   await edit($, 'x', 'y')
   await answer($, 'Still done.')
   expect(w.classified.length).toBe(1)
