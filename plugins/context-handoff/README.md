@@ -24,7 +24,8 @@ the kickoff prompt will be waiting in the prompt box next time you open a sessio
 - The status line shows `Handoff at 50%` so you know it's armed, and shows what step it's on while a handoff runs.
 - `/handoff` starts a handoff straight away, whatever the context level.
 - `/handoff 60` (or `/handoff at 60%`) changes when the automatic handoff starts. Anything from 5% to 95% works, and it
-  saves to the plugin's settings so it sticks between sessions.
+  saves in the plugin's own storage so it sticks between sessions. The threshold in `/config` is just the starting
+  point: once you've used `/handoff <percent>`, that choice wins.
 - `/handoff off` and `/handoff on` pause or resume the automatic handoff for the current session.
 - `/handoff status` shows the current reading and settings, and `/handoff resume` puts a saved kickoff prompt back in
   the box.
@@ -56,9 +57,8 @@ the kickoff prompt will be waiting in the prompt box next time you open a sessio
   replies to Claude. It doesn't stand in for any other tool, and every other tool call goes through untouched. Your
   normal permission rules apply to it, so you may get a prompt the first time; add
   `mcp__context-handoff__handoff_ready` to your allow rules if you don't want to be asked.
-- **Settings it changes.** Only when you run `/handoff <percent>` (like `/handoff 60`): it sets this plugin's
-  `context-handoff.threshold` setting to that number (5 to 95), the same one in `/config`. It doesn't set anything else
-  or touch environment variables.
+- **Settings it changes.** None. `/handoff <percent>` (like `/handoff 60`) saves that number (5 to 95) in the plugin's
+  own storage, not in your Claude Code settings. It doesn't set any configuration or environment variables.
 - Claude (not the mod) edits your project's existing docs and writes the handoff file during a wrap-up, using its
   normal tools, so your usual permission prompts still apply.
 - The kickoff prompt is saved in Claude Code's plugin storage, keyed to the project, so it can be offered next session.

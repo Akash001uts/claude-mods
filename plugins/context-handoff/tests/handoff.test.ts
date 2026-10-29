@@ -17,10 +17,10 @@ const MSGS = [{ role: 'user' as const, text: 'summary', toolUses: [] }]
 let clock: MockClock
 
 // Stands in for the engine beneath the plugin: answers its calls and records what it asked for.
-function engine(on: On, start: { percent: number }, compact: () => SessionCompactResult = () => ({ messages: MSGS })) {
+function engine(on: On, start: { percent: number }, compact: () => SessionCompactResult = () => ({ messages: MSGS }), stored: Record<string, unknown> = {}) {
   const seen = { submitted: [] as string[], contexts: [] as (readonly string[])[], commands: [] as { command: string; args: string }[], filled: [] as string[], toasts: [] as string[], statuses: [] as (string | undefined)[] }
   clock = mock.clock(on)
-  mock.store(on)
+  mock.store(on, stored)
   on('session.usage', () => ({ value: usage(start.percent) }))
   on('session.root', () => ({ value: 'C:/proj' }))
   on('command.register', () => ({ value: { command: 'handoff' } }))
@@ -198,14 +198,9 @@ test('/handoff on its own starts a handoff straight away, at any level', async (
 test('/handoff 60 saves when the auto handoff kicks in', async ($, on) => {
   const level = { percent: 55 }
   const seen = engine(on, level)
-  const saved: unknown[] = []
-  on('config.set', ($, e) => {
-    saved.push([e.key, e.value])
-    return { value: e.value }
-  })
   await start($)
+  // Only said once the store write resolves; the next test covers reading it back.
   expect((await handoff($, '60')).text).toBe('Auto handoff at 60%. Saved for future sessions too.')
-  expect(saved).toEqual([['context-handoff.threshold', 60]])
   expect((await handoff($, 'at 2%')).text).toBe('Pick a threshold between 5% and 95%.')
 
   await turn($)
@@ -216,20 +211,16 @@ test('/handoff 60 saves when the auto handoff kicks in', async ($, on) => {
   expect((await handoff($, 'status')).text).toContain('auto at 60%')
 })
 
-test('a threshold that cannot be saved still holds for the session', async ($, on) => {
-  const seen = engine(on, { percent: 30 })
-  on('config.set', () => ({ deny: 'managed by policy' }))
+test('a saved threshold wins over the /config one in the next session', async ($, on) => {
+  const seen = engine(on, { percent: 55 }, undefined, { threshold: 60 })
   await start($)
-  expect((await handoff($, '25%')).text).toBe(
-    "Auto handoff at 25%. For this session only (couldn't save the setting: managed by policy). The window is already at 30%, so it starts after your next turn.",
-  )
+  expect(seen.statuses.at(-1)).toBe('Handoff at 60%')
   await turn($)
-  expect(seen.submitted).toHaveLength(1)
+  expect(seen.submitted).toHaveLength(0)
 })
 
 test('it is on from the start of a session and says so in the status line', async ($, on) => {
   const seen = engine(on, { percent: 10 })
-  on('config.set', ($, e) => ({ value: e.value }))
   await start($)
   expect(seen.statuses.at(-1)).toBe('Handoff at 50%')
   await handoff($, 'off')

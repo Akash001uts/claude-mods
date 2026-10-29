@@ -106,15 +106,16 @@ async function fillSaved($: EngineInterface) {
   return true
 }
 
-// Saved as the plugin's threshold setting, as /config would; the change reloads the module with it.
-// Where the setting can't be written, it holds for this session only.
+// Saved in the plugin's own storage, so it changes no settings; it wins over the /config threshold from then on.
+// Where the store can't be written, it holds for this session only.
+const THRESHOLD = 'threshold'
 async function setThreshold($: EngineInterface, percent: number) {
   if (percent < 5 || percent > 95) return 'Pick a threshold between 5% and 95%.'
   cfg.threshold = percent
   await update($, isAuto, () => true)
   await update($, hasFired, () => false)
-  const saved = await $.config.set({ key: 'context-handoff.threshold', value: percent }).catch((err: unknown) => ({ deny: String(err) }))
-  const where = saved.deny === undefined ? 'Saved for future sessions too.' : `For this session only (couldn't save the setting: ${saved.deny}).`
+  const failed = await $.store.set(THRESHOLD, percent).then(() => undefined, (err: unknown) => String(err))
+  const where = failed === undefined ? 'Saved for future sessions too.' : `For this session only (couldn't save it: ${failed}).`
   const off = cfg.mode === 'off' ? ' Mode is off in /config, so set it to auto or ask for this to take effect.' : ''
   const now = (await reading($)).percent
   const soon = now !== undefined && now >= percent ? ` The window is already at ${now}%, so it starts after your next turn.` : ''
@@ -131,6 +132,9 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     isInteractive = e.isInteractive
+    // A threshold set with /handoff <percent> wins over the /config one.
+    const saved = await $.store.get(THRESHOLD).catch(() => undefined)
+    if (typeof saved === 'number' && saved >= 5 && saved <= 95) cfg.threshold = saved
     // On from the first prompt, like the context bar, and says so in the status line.
     await showStatus($)
     await $.command.register({
