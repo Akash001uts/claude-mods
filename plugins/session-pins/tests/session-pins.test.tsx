@@ -10,7 +10,8 @@ const BAND = {
 }
 
 // What the person answers when asked about the last session's pins; null dismisses the question.
-type Asking = { answer: string | null; questions: string[]; id: string }
+// `root` is the project the session runs in.
+type Asking = { answer: string | null; questions: string[]; id: string; root?: string }
 
 // Stands in for the engine beneath the plugin.
 function engine(on: On, id = 's1', saved: Record<string, unknown> = {}, asking: Asking = { answer: KEEP, questions: [], id }) {
@@ -18,6 +19,7 @@ function engine(on: On, id = 's1', saved: Record<string, unknown> = {}, asking: 
   mock.clock(on)
   mock.store(on, saved)
   on('session.id', () => ({ value: asking.id }))
+  on('session.root', () => ({ value: asking.root ?? 'C:\\Proj' }))
   on('tool.call', { tool: 'AskUserQuestion' }, ($, e) => {
     const question = e.questions[0]!.question
     asking.questions.push(question)
@@ -215,7 +217,7 @@ const BOTH = '1. Use Australian spelling\n2. Branch is pins-carry'
 
 const LAST_SESSION = {
   'session:old': { pins: [{ text: 'Use Australian spelling', pinnedAt: 0 }, { text: 'Branch is pins-carry', pinnedAt: 0 }], savedAt: 0 },
-  last: { pins: [{ text: 'Use Australian spelling', pinnedAt: 0 }, { text: 'Branch is pins-carry', pinnedAt: 0 }], savedAt: 0, sessionId: 'old' },
+  'last:c:/proj': { pins: [{ text: 'Use Australian spelling', pinnedAt: 0 }, { text: 'Branch is pins-carry', pinnedAt: 0 }], savedAt: 0, sessionId: 'old' },
 }
 
 test("a new session is asked about the last session's pins, and keeps them", async ($, on) => {
@@ -298,4 +300,22 @@ test('nobody is asked under -p, and a resumed session just gets its own pins', a
   await start($)
   expect((await run($, 'pin', 'list')).text).toBe('1. mine')
   expect(asking.questions).toHaveLength(0)
+})
+
+test("another project's pins aren't offered", async ($, on) => {
+  const asking: Asking = { answer: KEEP, questions: [], id: '', root: 'C:\\Other' }
+  engine(on, 'new', { ...LAST_SESSION }, asking)
+  await start($)
+  expect(asking.questions).toHaveLength(0)
+  expect((await run($, 'pin', 'list')).text).toMatch(/Nothing pinned/)
+
+  // Pins left here are offered here, and back in the first project it's still that project's pins.
+  await run($, 'pin', 'Other project note')
+  asking.id = 'next'
+  await start($)
+  expect(asking.questions).toEqual([expect.stringMatching(/Other project note/)])
+  asking.id = 'back'
+  asking.root = 'c:/proj'
+  await start($)
+  expect(asking.questions[1]).toMatch(/Keep the 2 pins/)
 })

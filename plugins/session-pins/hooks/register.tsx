@@ -18,8 +18,9 @@ const offeredTo = atom({ plugin: 'session-pins', key: 'offeredTo' } as const, nu
 
 type Saved = { pins: Pin[]; savedAt: number }
 const sessionKey = (id: string) => `session:${id}`
-// The pins as the last session to change them left them, offered to the next new session. Gone once unpinned.
-const LAST = 'last'
+// The pins as the last session in this project left them, offered to the next new session there. Gone once unpinned.
+// Keyed by project root, so one project's pins aren't offered in another.
+const lastKey = (root: string) => `last:${root.replace(/\\/g, '/').toLowerCase()}`
 type Last = Saved & { sessionId: string }
 
 export const KEEP = 'Keep them'
@@ -83,6 +84,7 @@ async function save($: EngineInterface, list: Pin[]) {
   await update($, pins, () => list)
   const sessionId = await $.session.id()
   const key = sessionKey(sessionId)
+  const LAST = lastKey(await $.session.root())
   if (list.length === 0) {
     await $.store.delete(key)
     // Unpinned here, so the next session isn't offered them.
@@ -114,6 +116,7 @@ const preview = (all: readonly Pin[]) => all.map((p, i) => `${i + 1}. ${cut(oneL
 async function offer($: EngineInterface) {
   const sessionId = await $.session.id()
   if ((await read($, offeredTo)) === sessionId) return
+  const LAST = lastKey(await $.session.root())
   const last = (await $.store.get(LAST)) as Last | undefined
   if (!last || last.sessionId === sessionId || last.pins.length === 0) return
   if ((await read($, pins)).length > 0) return
