@@ -1,0 +1,10 @@
+{
+  "name": "application-assistant",
+  "version": "0.1.0",
+  "description": "Job and internship applications: a daily role scan, eligibility checks against your own profile, application packs, form filling in Chrome for you to submit, a tracker kept up to date from your inbox, and reminders",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
