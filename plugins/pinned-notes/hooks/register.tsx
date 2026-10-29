@@ -93,8 +93,14 @@ export const section = (list: readonly Pin[]) =>
   [
     '# Pinned notes',
     'The user pinned these to the top of this session. Treat them as standing instructions and context for the whole session: they still apply after compaction, until the user unpins them. Don\'t comment on them unless asked.',
-    ...list.map((p, i) => `${i + 1}. ${p.kind ? `${p.kind === 'dir' ? 'Folder' : 'File'} (read it when it's relevant): ${p.text}` : p.text}`),
+    ...list.map((p, i) => `${i + 1}. ${describe(p)}`),
   ].join('\n')
+
+const describe = (p: Pin) => {
+  if (p.rules)
+    return `Rules file (the user's standing rules: binding, not background. Follow them for the whole session, and re-read this file after any compaction): ${p.text}`
+  return p.kind ? `${p.kind === 'dir' ? 'Folder' : 'File'} (read it when it's relevant): ${p.text}` : p.text
+}
 
 async function save($: EngineInterface, list: Pin[]) {
   await update($, pins, () => list)
@@ -188,6 +194,51 @@ async function add($: EngineInterface, text: string) {
   return `${what} (#${now.length + 1}). Claude sees it for the rest of the session.`
 }
 
+// The CLAUDE.md files that apply here, yours first, then the project's. Only checked on disk, never read.
+async function rulesFiles($: EngineInterface) {
+  const root = await $.session.root()
+  const home = (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE'))
+  const candidates = [...(home ? [`${home}/.claude/CLAUDE.md`] : []), `${root}/CLAUDE.md`, `${root}/.claude/CLAUDE.md`, `${root}/CLAUDE.local.md`]
+  const found: string[] = []
+  for (const path of candidates) {
+    const stat = await $.fs.stat(path, { resolve: true }).catch(() => undefined)
+    const full = stat?.realPath ?? path
+    if (stat?.kind === 'file' && !found.some(f => f.toLowerCase() === full.toLowerCase())) found.push(full)
+  }
+  return found
+}
+
+async function pinRules($: EngineInterface) {
+  const files = await rulesFiles($)
+  if (files.length === 0) return 'No CLAUDE.md to pin here (looked for ~/.claude/CLAUDE.md, and CLAUDE.md, .claude/CLAUDE.md and CLAUDE.local.md in the project).'
+  const now = [...(await read($, pins))]
+  const added: string[] = []
+  let isFull = false
+  for (const path of files) {
+    const at = now.findIndex(p => p.text === path)
+    // Already pinned as a plain file: it becomes a rules pin where it is.
+    if (at >= 0) {
+      if (!now[at]!.rules) {
+        now[at] = { ...now[at]!, kind: 'file', rules: true }
+        added.push(path)
+      }
+      continue
+    }
+    if (now.length >= MAX_PINS) {
+      isFull = true
+      break
+    }
+    now.push({ text: path, pinnedAt: await $.clock.now(), kind: 'file', rules: true })
+    added.push(path)
+  }
+  const full = isFull ? ` You're at ${MAX_PINS} pins, so the rest weren't pinned; /unpin one first.` : ''
+  if (added.length === 0) return `Your rules files are already pinned.${full}`
+  await save($, now)
+  await update($, isHidden, () => false)
+  const names = added.map(path => fileLabel(path, 60)).join(', ')
+  return `Pinned ${added.length === 1 ? '1 rules file' : `${added.length} rules files`}: ${names}. Claude is told they're binding and to re-read them after compaction.${full}`
+}
+
 async function remove($: EngineInterface, arg: string) {
   const now = await read($, pins)
   if (now.length === 0) return 'Nothing pinned.'
@@ -214,7 +265,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'pin',
       description: 'Pin a note to this session (shown above the prompt, kept in Claude\'s context); on its own pins your last message',
-      argumentHint: '[<text> | list | hide | show]',
+      argumentHint: '[<text> | <path> | rules | list | hide | show]',
     })
     await $.command.register({
       name: 'unpin',
@@ -251,6 +302,7 @@ export const register: Register = on => {
     const arg = e.args.trim()
     const word = arg.toLowerCase()
     if (word === 'list') return { text: list(await read($, pins)) }
+    if (word === 'rules') return { text: await pinRules($) }
     if (word === 'hide' || word === 'show') {
       await update($, isHidden, () => word === 'hide')
       return { text: word === 'hide' ? 'Pins hidden above the prompt (Claude still sees them). /pin show brings them back.' : 'Pins shown above the prompt.' }
@@ -297,7 +349,7 @@ export const register: Register = on => {
             return (
               <Text wrap="truncate">
                 {head}
-                <Text>{p.kind === 'dir' ? '📁 ' : '📄 '}</Text>
+                <Text>{p.rules ? '📜 ' : p.kind === 'dir' ? '📁 ' : '📄 '}</Text>
                 <Link href={fileUrl(p.text)}>{fileLabel(p.text, width - 3)}</Link>
               </Text>
             )

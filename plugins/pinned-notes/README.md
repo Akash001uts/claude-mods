@@ -20,6 +20,11 @@ it can get lost in the summary. This mod lets you pin it instead.
   part of the path as a link, and Claude gets the full path, so it can read the file when it's relevant without you
   saying where it is. Clicking the link opens it however your terminal opens `file://` links (most open the file or
   folder; some don't support them). If the path doesn't exist, it's pinned as plain text instead.
+- `/pin rules` pins your CLAUDE.md files (`~/.claude/CLAUDE.md`, and `CLAUDE.md`, `.claude/CLAUDE.md` or
+  `CLAUDE.local.md` in the project, whichever exist) as 📜 rules pins. Claude already loads these files, but after a
+  compact it tends to treat them as background and drift from them. A rules pin tells Claude they're binding for the
+  whole session and to re-read the file after any compact. It's a stronger standing instruction, not a guarantee: the
+  mod doesn't make Claude re-read anything itself. Each file takes one of your 20 pins.
 - Claude gets the pinned notes in its system prompt, told to treat them as standing instructions. Because they're in
   the system prompt and not the conversation, they're still there after a compact.
 - `/pin list` shows every pin in full, `/unpin 2` removes one, `/unpin` on its own removes the latest one, and
@@ -52,7 +57,8 @@ Up to 20 pins, each up to 1000 characters.
   latest one in memory and doesn't store or send it anywhere. Slash commands and messages from other tools are skipped.
   When you `/pin` something shaped like a path (starting with a drive letter, `/`, `~`, `./` or `../`), it checks
   once that the file or folder exists and whether it's a file or a folder. It doesn't open or read the file. For `~` it
-  reads your `HOME` (or `USERPROFILE`) environment variable to find your home folder.
+  reads your `HOME` (or `USERPROFILE`) environment variable to find your home folder. `/pin rules` checks the same way
+  whether each of the four CLAUDE.md files exists, and doesn't read them either.
 - **What it asks.** At the start of a new session, if your last session left pins, one question (Claude Code's own
   question box) asking whether to keep them. Nothing is asked when there's nothing to carry over, when you resume a
   session, or in a `claude -p` run.
@@ -76,7 +82,8 @@ The mod is one file, `hooks/register.tsx`. It hooks these events and nothing els
 - `prompt.compose`: while anything is pinned, adds one section listing your pins at the end of the system prompt.
   It leaves the other sections, your settings, instructions and tool descriptions as they are.
 - `command.run` (for `/pin` and `/unpin` only): pins, lists, hides, shows or unpins notes. For a path, it checks the
-  file or folder exists (`$.fs.stat`) before pinning it as a file pin.
+  file or folder exists (`$.fs.stat`) before pinning it as a file pin. For `/pin rules`, it checks which of the four
+  CLAUDE.md locations exist (`$.fs.stat`) and pins those as rules pins.
 - `ui.render` for the area above the prompt: draws the pins, with file pins as `file://` links. Anything else drawn
   there by Claude Code or other plugins still shows.
 

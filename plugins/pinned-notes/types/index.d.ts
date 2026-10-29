@@ -1,5 +1,6 @@
 // `kind` marks a pinned file or folder, whose `text` is its absolute path.
-export type Pin = { text: string; pinnedAt: number; kind?: 'file' | 'dir' }
+// `rules` marks a file pinned by /pin rules (a CLAUDE.md), given to Claude as binding.
+export type Pin = { text: string; pinnedAt: number; kind?: 'file' | 'dir'; rules?: true }
 
 declare module 'claude-code' {
   interface PluginState {
