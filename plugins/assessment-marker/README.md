@@ -75,6 +75,8 @@ To install:
 - Nothing is sent anywhere outside Claude Code. It doesn't register tools or change your settings. Delete a subject's
   `.assessment-marker` folder to start that subject over.
 
+[Privacy](PRIVACY.md): what it reads and stores, where, and how to delete it.
+
 ## What each hook does
 
 The mod is one file, `hooks/register.ts`. It hooks these events and nothing else:
