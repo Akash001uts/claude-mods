@@ -79,13 +79,13 @@ async function setup($: EngineInterface) {
     options: [...PARTS],
     multiSelect: true,
   })
-  const on = picked.split(',').map(p => p.trim())
+  const chosen = picked.split(',').map(p => p.trim())
   const who = await $.ui.ask('Who should see coach\'s notes?', { header: 'Notes', options: [ONLY_CLAUDE, BOTH] })
   const s: Settings = {
     ...(await get($)),
-    loop: on.includes(PARTS[0]),
-    done: on.includes(PARTS[1]),
-    style: on.includes(PARTS[2]),
+    loop: chosen.includes(PARTS[0]),
+    done: chosen.includes(PARTS[1]),
+    style: chosen.includes(PARTS[2]),
     isLoud: who === BOTH,
   }
   await put($, s)
@@ -203,57 +203,62 @@ export const register: Register = on => {
   })
 
   on('tool.call', async ($, e, next) => {
-    const s = await get($)
-    if (e.agentId || (!s.loop && !s.done && !s.style)) return next(e)
+    const s = await get($).catch(() => undefined)
+    if (!s || e.agentId || (!s.loop && !s.done && !s.style)) return next(e)
     const tool = String(e.tool)
     const input = e as unknown as { tool: string; [k: string]: unknown }
     const result = await next(e)
     if (result.deny !== undefined) return result
-    const notes: string[] = []
+    // A slip in the notes never costs Claude the result.
+    try {
+      const notes: string[] = []
 
-    if (EDIT_TOOLS.has(tool) && !result.isError) {
-      edits++
-      const file = String(input.file_path ?? input.notebook_path ?? '')
-      changed.add(file)
-      if (s.loop && (tool === 'Edit' || tool === 'MultiEdit')) {
-        const key = `${file}\n${JSON.stringify(tool === 'Edit' ? [input.old_string, input.new_string] : input.edits)}`
-        const n = (editsSeen.get(key) ?? 0) + 1
-        editsSeen.set(key, n)
-        if (n - 1 >= s.threshold) {
-          notes.push(REDO_NOTE)
-          tell(s, $, 'the same edit was made again, told Claude to step back')
-        }
-      }
-      if (s.style) {
-        const code = written(input)
-        const slips = banned(code, phrases(s))
-        if (slips.length) notes.push(`coach: The code you just wrote uses ${slips.map(p => `"${p}"`).join(', ')}, which the user asked you not to use. Take it out.`)
-        const rate = s.comments === undefined ? undefined : commentRate(code)
-        if (rate !== undefined && s.comments !== undefined && rate > s.comments)
-          notes.push(`coach: That edit has about ${rate.toFixed(1)} comment lines per 10 lines of code; the user allows at most ${s.comments}. Cut the comments down to what is not obvious from the code.`)
-        if (slips.length || (rate !== undefined && s.comments !== undefined && rate > s.comments)) tell(s, $, 'code slipped from your style rules, told Claude')
-      }
-    }
-
-    if (tool === 'Bash' || tool === 'PowerShell') {
-      const command = String(input.command ?? '')
-      if (verifies(command)) changed = new Set()
-      else if (WRITES.test(command)) changed.add(`(shell) ${command.slice(0, 80)}`)
-      const key = s.loop ? errorKey(result.text ?? '') : undefined
-      if (key && (result.isError || /error|fail/i.test(result.text ?? ''))) {
-        const seen = errorsSeen.get(key)
-        if (seen && edits > seen.edits) {
-          seen.repeats++
-          if (seen.repeats >= s.threshold) {
-            notes.push(LOOP_NOTE)
-            tell(s, $, 'same error came back after the fix, told Claude to step back')
+      if (EDIT_TOOLS.has(tool) && !result.isError) {
+        edits++
+        const file = String(input.file_path ?? input.notebook_path ?? '')
+        changed.add(file)
+        if (s.loop && (tool === 'Edit' || tool === 'MultiEdit')) {
+          const key = `${file}\n${JSON.stringify(tool === 'Edit' ? [input.old_string, input.new_string] : input.edits)}`
+          const n = (editsSeen.get(key) ?? 0) + 1
+          editsSeen.set(key, n)
+          if (n - 1 >= s.threshold) {
+            notes.push(REDO_NOTE)
+            tell(s, $, 'the same edit was made again, told Claude to step back')
           }
         }
-        errorsSeen.set(key, { edits, repeats: seen?.repeats ?? 0 })
+        if (s.style) {
+          const code = written(input)
+          const slips = banned(code, phrases(s))
+          if (slips.length) notes.push(`coach: The code you just wrote uses ${slips.map(p => `"${p}"`).join(', ')}, which the user asked you not to use. Take it out.`)
+          const rate = s.comments === undefined ? undefined : commentRate(code)
+          if (rate !== undefined && s.comments !== undefined && rate > s.comments)
+            notes.push(`coach: That edit has about ${rate.toFixed(1)} comment lines per 10 lines of code; the user allows at most ${s.comments}. Cut the comments down to what is not obvious from the code.`)
+          if (slips.length || (rate !== undefined && s.comments !== undefined && rate > s.comments)) tell(s, $, 'code slipped from your style rules, told Claude')
+        }
       }
+
+      if (tool === 'Bash' || tool === 'PowerShell') {
+        const command = String(input.command ?? '')
+        if (verifies(command)) changed = new Set()
+        else if (WRITES.test(command)) changed.add(`(shell) ${command.slice(0, 80)}`)
+        const key = s.loop ? errorKey(result.text ?? '') : undefined
+        if (key && (result.isError || /error|fail/i.test(result.text ?? ''))) {
+          const seen = errorsSeen.get(key)
+          if (seen && edits > seen.edits) {
+            seen.repeats++
+            if (seen.repeats >= s.threshold) {
+              notes.push(LOOP_NOTE)
+              tell(s, $, 'same error came back after the fix, told Claude to step back')
+            }
+          }
+          errorsSeen.set(key, { edits, repeats: seen?.repeats ?? 0 })
+        }
+      }
+      return notes.reduce(withNote, result)
+    } catch {
+      return result
     }
-    return notes.reduce(withNote, result)
-  }).catch(($, e, next) => next(e))
+  })
 
   on('prompt.submit', async ($, e, next) => {
     if (e.origin.kind === 'plugin' && e.origin.name === 'coach') isNudgeTurn = true
@@ -262,7 +267,7 @@ export const register: Register = on => {
     const notes = pending
     pending = []
     return next({ ...e, context: [...(e.context ?? []), ...notes] })
-  }).catch(($, e, next) => next(e))
+  })
 
   on('turn.complete', async ($, e, next) => {
     const done = await next(e)
