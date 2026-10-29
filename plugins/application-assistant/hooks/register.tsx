@@ -106,7 +106,22 @@ async function rundown($: EngineInterface, c: Config) {
 
 // A prompt can't be submitted from inside the command's own hook (it would wait on the turn the hook holds), so it
 // goes from a timer, just after.
-const later = ($: EngineInterface, text: string) => void $.clock.after(0, () => void $.prompt.submit({ text }).catch(() => {}))
+async function submit($: EngineInterface, text: string) {
+  await $.prompt.submit({ text })
+}
+
+function later($: EngineInterface, text: string) {
+  $.clock.after(0, () => void submit($, text).catch(() => {}))
+}
+
+async function offerSetup($: EngineInterface) {
+  const answer = await $.ui.ask('application-assistant helps you find roles, check them against your situation, build application packs and keep a tracker. Set up your profile now? It takes a short interview.', {
+    header: 'Applications',
+    options: [SET_UP, LATER],
+  })
+  if (answer === SET_UP) await $.prompt.submit({ text: NUDGE('setup', SKILLS.setup!.what) })
+  else $.ui.log('application-assistant: /apply setup whenever you\'re ready.')
+}
 
 const NUDGE = (skill: string, what: string, args = '') =>
   `Use the application-assistant:${skill} skill. ${what}${args ? ` ${args}` : ''}`
@@ -120,16 +135,7 @@ export const register: Register = on => {
     if (!c) {
       if (await $.store.get('offered')) return started
       await $.store.set('offered', true)
-      void $.ui
-        .ask('application-assistant helps you find roles, check them against your situation, build application packs and keep a tracker. Set up your profile now? It takes a short interview.', {
-          header: 'Applications',
-          options: [SET_UP, LATER],
-        })
-        .then(async a => {
-          if (a === SET_UP) await $.prompt.submit({ text: NUDGE('setup', SKILLS.setup!.what) })
-          else $.ui.log('application-assistant: /apply setup whenever you\'re ready.')
-        })
-        .catch(() => {})
+      void offerSetup($).catch(() => {})
       return started
     }
     // Only in the applications folder: the rundown, and the fallback scan when the scheduled one didn't run.
