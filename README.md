@@ -47,12 +47,15 @@ How it works:
 - The first time it runs it prints a quick rundown of the commands in the chat, and `/context-bar help` shows it again.
 - The third line shows your rate limits (subscription accounts only), how many tokens are left before auto-compact
   kicks in, and how long the session has been running. It hides itself if there isn't room for it.
+- If you're on pace to use up your 7-day limit before it resets, the third line says how long you have left, like
+  `7d 80% (out in 1d 0h at this pace, resets in 3d 0h)`.
 - `/context-bar` hides or shows the bar for the current session.
 - `/context-bar below` moves the bar under the prompt box if you'd rather have it there, and `/context-bar above` moves
   it back. It remembers your choice ("Bar position" in `/config` sets where it starts).
 - `/context-bar details` opens a pane with the full breakdown: each category and its share of the window, every memory
   file, MCP servers (and how many of their tools are loaded), your biggest skills, custom agents, and the cache split
-  of the last API call. Counting all that costs a few extra requests (same as `/context`), so it only refreshes while
+  of the last API call, plus what your last turn used (tokens, rough cost at API prices, how far your limits moved).
+  Counting all that costs a few extra requests (same as `/context`), so it only refreshes while
   the pane is open, after each turn or when you press `r`.
 
 ## auto-handoff
@@ -107,9 +110,10 @@ compact.
 
 - `/pin <text>` pins a note, and `/pin` on its own pins the last message you typed.
 - `/pin <path>` pins a file or folder as a link, and Claude gets the full path so it can read it when it's relevant.
+- `/pin rules` pins your CLAUDE.md files as rules, so Claude treats them as binding and re-reads them after a compact.
 - `/pin list` shows them all, `/unpin 2` removes one, `/unpin` removes the latest and `/unpin all` clears them.
 - `/pin hide` and `/pin show` hide or show them above the prompt (Claude still sees them).
-- Pins come back if you resume the session, but `/clear` or a new session starts fresh.
+- Pins come back if you resume the session, and a new session (or `/clear`) asks whether to keep your last session's pins.
 
 ## voice-profile
 
