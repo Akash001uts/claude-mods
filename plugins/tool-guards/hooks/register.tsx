@@ -35,20 +35,20 @@ async function setup($: EngineInterface) {
     'Which tool guards should be on? Shell edits: Claude must use Edit or Write so /rewind works. Attribution: no Co-Authored-By, "Generated with Claude Code" or session links in your commits and PRs. Big reads: asks you before a read that would take a quarter of the context left.',
     { header: 'Guards', options: [...GUARDS], multiSelect: true },
   )
-  const on = picked.split(',').map(p => p.trim())
+  const chosen = picked.split(',').map(p => p.trim())
   const note = await $.ui.ask('Show a note when a guard steps in?', { header: 'Notes', options: [NOTE, NO_NOTE] })
-  const s: Settings = { ...(await get($)), edits: on.includes(GUARDS[0]), attribution: on.includes(GUARDS[1]), reads: on.includes(GUARDS[2]), isLoud: note === NOTE }
+  const s: Settings = { ...(await get($)), edits: chosen.includes(GUARDS[0]), attribution: chosen.includes(GUARDS[1]), reads: chosen.includes(GUARDS[2]), isLoud: note === NOTE }
   await put($, s)
   $.ui.log(`tool-guards: ${status(s)}\n/guards shows the commands.`)
 }
 
 const status = (s: Settings) => {
-  const on = [
+  const parts = [
     s.edits && `shell edits (${s.editsScope === 'auto' ? 'auto mode only' : 'every mode'})`,
     s.attribution && `attribution (${s.attributionMode === 'fix' ? 'fixed quietly' : 'refused'})`,
     s.reads && 'big reads',
   ].filter(Boolean)
-  return `${on.length ? `${on.join(', ')} on` : 'every guard off'}; notes ${s.isLoud ? 'shown' : 'hidden'}.`
+  return `${parts.length ? `${parts.join(', ')} on` : 'every guard off'}; notes ${s.isLoud ? 'shown' : 'hidden'}.`
 }
 
 const HELP = [
@@ -126,50 +126,62 @@ export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
     const tool = String(e.tool)
     if (tool !== 'Bash' && tool !== 'PowerShell') return next(e)
-    const s = await get($)
-    let command = String((e as { command?: unknown }).command ?? '')
+    const original = String((e as { command?: unknown }).command ?? '')
+    let command = original
+    let s: Settings
+    // A check that fails refuses the command rather than letting it through unchecked.
+    try {
+      s = await get($)
 
-    if (s.edits && (s.editsScope === 'always' || mode === 'auto')) {
-      const targets = writes(command)
-      if (targets.length) {
-        tell(s, $, `stopped a shell write to ${targets[0]}; Claude will use Edit instead`)
-        return { deny: `${EDIT_REASON} ${targets.join(', ')}. Shell writes into temp or scratch folders are fine.` }
-      }
-    }
-
-    if (s.attribution && isCommitOrPr(command)) {
-      const file = messageFile(command)
-      const fromFile = file ? await $.fs.read(file).catch(() => '') : ''
-      if (hasAttribution(fromFile)) {
-        tell(s, $, 'refused a commit whose message file has attribution lines')
-        return { deny: `${ATTRIBUTION_REASON} They are in ${file}.` }
-      }
-      if (hasAttribution(command)) {
-        const fixed = s.attributionMode === 'fix' ? strip(command) : undefined
-        if (fixed === undefined) {
-          tell(s, $, 'refused a commit with attribution lines')
-          return { deny: ATTRIBUTION_REASON }
+      if (s.edits && (s.editsScope === 'always' || mode === 'auto')) {
+        const targets = writes(command)
+        if (targets.length) {
+          tell(s, $, `stopped a shell write to ${targets[0]}; Claude will use Edit instead`)
+          return { deny: `${EDIT_REASON} ${targets.join(', ')}. Shell writes into temp or scratch folders are fine.` }
         }
-        tell(s, $, 'took the attribution lines out of a commit')
-        command = fixed
       }
+
+      if (s.attribution && isCommitOrPr(command)) {
+        const file = messageFile(command)
+        const fromFile = file ? await $.fs.read(file).catch(() => '') : ''
+        if (hasAttribution(fromFile)) {
+          tell(s, $, 'refused a commit whose message file has attribution lines')
+          return { deny: `${ATTRIBUTION_REASON} They are in ${file}.` }
+        }
+        if (hasAttribution(command)) {
+          const fixed = s.attributionMode === 'fix' ? strip(command) : undefined
+          if (fixed === undefined) {
+            tell(s, $, 'refused a commit with attribution lines')
+            return { deny: ATTRIBUTION_REASON }
+          }
+          tell(s, $, 'took the attribution lines out of a commit')
+          command = fixed
+        }
+      }
+    } catch {
+      return { deny: 'tool-guards could not check this command; try again.' }
     }
 
-    const ran = await next(command === String((e as { command?: unknown }).command ?? '') ? e : ({ ...e, command } as typeof e))
-    if (!s.reads || ran.deny !== undefined || !ran.text) return ran
-    const room = await left($).catch(() => undefined)
-    const tokens = Math.ceil(ran.text.length / CHARS_PER_TOKEN)
-    if (room === undefined || tokens < room * SHARE) return ran
-    const pct = Math.round((tokens / room) * 100)
-    tell(s, $, `that output took about ${pct}% of the context left`)
-    return {
-      ...ran,
-      context: [
-        ...(ran.context ?? []),
-        `tool-guards: That output took about ${pct}% of the context you had left. For the rest of this session, narrow commands down first (head, tail, grep, a line range) before printing a lot.`,
-      ],
+    const ran = await next(command === original ? e : ({ ...e, command } as typeof e))
+    // A slip in the size note never costs Claude the output.
+    try {
+      if (!s.reads || ran.deny !== undefined || !ran.text) return ran
+      const room = await left($).catch(() => undefined)
+      const tokens = Math.ceil(ran.text.length / CHARS_PER_TOKEN)
+      if (room === undefined || tokens < room * SHARE) return ran
+      const pct = Math.round((tokens / room) * 100)
+      tell(s, $, `that output took about ${pct}% of the context left`)
+      return {
+        ...ran,
+        context: [
+          ...(ran.context ?? []),
+          `tool-guards: That output took about ${pct}% of the context you had left. For the rest of this session, narrow commands down first (head, tail, grep, a line range) before printing a lot.`,
+        ],
+      }
+    } catch {
+      return ran
     }
-  }).catch(($, e, next) => (next.called ? next(e) : { deny: 'tool-guards could not check this command; try again.' }))
+  })
 
   // Big reads: before a file read that would take a quarter or more of the context left, ask the person.
   on('tool.check', { tool: 'Read' }, async ($, e, next) => {
