@@ -112,7 +112,7 @@ const HELP = [
   '/coach setup                    ask the first-run questions again',
 ].join('\n')
 
-async function command($: EngineInterface, args: string) {
+async function coachCommand($: EngineInterface, args: string) {
   const s = await get($)
   const [word = '', ...more] = args.trim().split(/\s+/)
   const rest = more.join(' ').trim()
@@ -314,5 +314,5 @@ export const register: Register = on => {
     return done
   })
 
-  on('command.run', { command: 'coach' }, async ($, e) => ({ text: await command($, e.args) }))
+  on('command.run', { command: 'coach' }, async ($, e) => ({ text: await coachCommand($, e.args) }))
 }
