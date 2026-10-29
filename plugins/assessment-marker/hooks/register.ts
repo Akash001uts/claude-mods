@@ -164,7 +164,9 @@ export const register: Register = on => {
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
     await refreshSubject($).catch(() => {})
-    const text = guide(subject, await knownSubjects($).catch(() => []), await saveTo($).catch(() => DEFAULT_SAVE))
+    const known = await knownSubjects($).catch(() => [])
+    const save = await saveTo($).catch(() => DEFAULT_SAVE)
+    const text = guide(subject, known, save)
     return { ...composed, sections: [...composed.sections, { id: `${PLUGIN}:guide`, text, scope: 'session' as const }] }
   })
 
