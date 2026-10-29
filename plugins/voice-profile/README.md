@@ -47,9 +47,16 @@ uses it every time I ask for a draft.
 - **What it asks.** In the first session after install (not under `claude -p`), one question in Claude Code's own
   question box: which sources to learn from. It only asks on its own until you answer or close it. `/write setup`
   asks again.
-- **What it sends to Claude.** If you pick something, it submits one prompt asking Claude to run the setup skill.
-  That prompt only has the names of the sources you picked (and anything you typed under "Other") and the profile's
-  path. Claude then reads only those sources, using your own connectors and tools, with your usual permission
+- **What it puts in the prompts it submits.** It submits one prompt, and only after you tick sources in the setup
+  list (or in `/write setup`):
+
+  ```
+  Set up my voice profile from: [the sources you ticked]. Use the voice-profile:setup skill. Profile file: [path]
+  ```
+
+  That's all it holds: the names of the sources you ticked, anything you typed under "Other" (cut to 200
+  characters), and the profile's path. It never puts the profile's contents, your environment variables or anything
+  else it reads into a prompt, and it doesn't submit any other prompt. Claude then reads only those sources, using your own connectors and tools, with your usual permission
   prompts. The emails, messages and files it samples are read by Claude in that conversation, the same as anything
   else you share with it; only the summary and short excerpts are kept.
 - **What it reads.** The `USERPROFILE` (or `HOME`) environment variable, to find your home folder, and the profile file
@@ -74,9 +81,8 @@ uses it every time I ask for a draft.
   of the system prompt, your settings, instructions, other hooks' sections and tool descriptions as they are.
 - **`command.run`**: only for `/write`. On its own it shows your profile summary; `/write setup` asks the setup
   question again. It doesn't see or change any other command.
-- **The one prompt it submits** (`prompt.submit`, only after you tick sources): `Set up my voice profile from:
-  [the sources you ticked]. Use the voice-profile:setup skill. Profile file: [path]`. The profile's contents and
-  anything else it reads never go in that prompt.
+- **`prompt.submit`**: it doesn't hook this. It only calls it once, to send the setup prompt shown under "What it puts
+  in the prompts it submits".
 
 ## Licence
 
