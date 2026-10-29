@@ -1,0 +1,9 @@
+{
+  "name": "needs-you",
+  "version": "0.1.0",
+  "description": "Messages you on Slack when Claude has been waiting on you for a while (a finished turn, a permission prompt, a question); reply there and the session carries on",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}
