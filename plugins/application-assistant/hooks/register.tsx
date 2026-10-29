@@ -51,9 +51,9 @@ export const soon = (all: readonly Reminder[], today: string) =>
 export function scanState(c: Config, nowMs: number): 'ok' | 'missed' | 'failed' {
   if (c.lastScanOk === false) return 'failed'
   const today = dayOf(nowMs)
-  const [h = 8, m = 0] = (c.scanTime ?? '08:00').split(':').map(Number)
+  const [hour = 8, min = 0] = (c.scanTime ?? '08:00').split(':').map(Number)
   const due = new Date(nowMs)
-  due.setHours(h, m, 0, 0)
+  due.setHours(hour, min, 0, 0)
   if (!c.lastScan) return nowMs >= due.getTime() ? 'missed' : 'ok'
   const last = dayOf(Date.parse(c.lastScan))
   if (last === today) return 'ok'
