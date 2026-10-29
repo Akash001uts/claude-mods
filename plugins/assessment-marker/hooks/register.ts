@@ -82,10 +82,8 @@ async function refreshSubject($: EngineInterface) {
   await remember($, subject)
 }
 
-async function saveTo($: EngineInterface) {
-  const saved = await $.store.get(SAVE_TO).catch(() => undefined)
-  return typeof saved === 'string' && saved.trim() ? saved : DEFAULT_SAVE
-}
+// The saved choice, or the default folder when there's none.
+const saveChoice = (saved: unknown) => (typeof saved === 'string' && saved.trim() ? saved : DEFAULT_SAVE)
 
 // The first option is the default folder, the second chat only; anything typed under Other is the person's own
 // folder or file name.
@@ -165,8 +163,8 @@ export const register: Register = on => {
     const composed = await next(e)
     await refreshSubject($).catch(() => {})
     const known = await knownSubjects($).catch(() => [])
-    const save = await saveTo($).catch(() => DEFAULT_SAVE)
-    const text = guide(subject, known, save)
+    const saved = await $.store.get(SAVE_TO).catch(() => undefined)
+    const text = guide(subject, known, saveChoice(saved))
     return { ...composed, sections: [...composed.sections, { id: `${PLUGIN}:guide`, text, scope: 'session' as const }] }
   })
 
