@@ -363,3 +363,25 @@ test('/pin <path> pins an existing file or folder as a link, and gives Claude th
   expect(links).toEqual(['file:///C:/Users/me/Assignment%202/spec.pdf', 'file:///C:/Proj/docs'])
   await ui.unmount()
 })
+
+test('/pin rules pins the CLAUDE.md files that exist as binding rules', async ($, on) => {
+  engine(on)
+  disk(on, { 'C:/Users/me/.claude/CLAUDE.md': 'file', 'C:/Proj/.claude/CLAUDE.md': 'file' })
+  await start($)
+  // Already pinned as a plain file: it turns into a rules pin rather than a second copy.
+  await run($, 'pin', 'C:\\Proj\\.claude\\CLAUDE.md')
+  expect((await run($, 'pin', 'rules')).text).toMatch(/^Pinned 2 rules files: \.claude\\CLAUDE\.md, \.claude\\CLAUDE\.md\. Claude is told they're binding/)
+  expect((await run($, 'pin', 'list')).text).toBe('1. C:\\Proj\\.claude\\CLAUDE.md\n2. C:\\Users\\me\\.claude\\CLAUDE.md')
+  const section = (await pinsSection($)) ?? ''
+  expect(section).toContain('1. Rules file (the user\'s standing rules: binding, not background.')
+  expect(section).toContain('re-read this file after any compaction): C:\\Users\\me\\.claude\\CLAUDE.md')
+  expect((await run($, 'pin', 'rules')).text).toBe('Your rules files are already pinned.')
+})
+
+test('/pin rules says so when there is no CLAUDE.md', async ($, on) => {
+  engine(on)
+  disk(on, {})
+  await start($)
+  expect((await run($, 'pin', 'rules')).text).toMatch(/^No CLAUDE\.md to pin here/)
+  expect(await pinsSection($)).toBeUndefined()
+})
