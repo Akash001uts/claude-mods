@@ -250,7 +250,7 @@ export function stats(entries: readonly Entry[], from: string, today: string) {
       }
       byDay.set(d, slot)
     }
-    e.hours.forEach((n, h) => (hours[h]! += n))
+    e.hours.forEach((n, hr) => (hours[hr]! += n))
   }
   // A day with a message counts toward a streak, whichever session it belongs to.
   const active = [...byDay.entries()].filter(([, v]) => v.messages > 0).map(([d]) => d).sort()

@@ -130,10 +130,17 @@ async function bigCopy($: EngineInterface, from: string, to: string) {
   const dir = to.slice(0, to.lastIndexOf('/'))
   const isWin = await isWindows($)
   const win = (path: string) => path.replace(/\//g, '\\')
-  // The folder may not exist yet (a new project); mkdir fails harmlessly when it does.
-  await $.process.run(isWin ? ['cmd', '/c', 'mkdir', win(dir)] : ['mkdir', '-p', dir]).catch(() => undefined)
-  const r = await $.process.run(isWin ? ['cmd', '/c', 'copy', '/y', win(from), win(to)] : ['cp', from, to], { timeoutMs: 120_000 })
-  if (r.exitCode !== 0) throw new Error(`copy failed: ${r.stderr.slice(0, 200)}`)
+  // The folder may not exist yet (a new project); mkdir fails harmlessly when it does. On Windows mkdir and copy are
+  // built into cmd, so cmd runs them.
+  if (isWin) {
+    await $.process.run(['cmd', '/c', 'mkdir', win(dir)]).catch(() => undefined)
+    const r = await $.process.run(['cmd', '/c', 'copy', '/y', win(from), win(to)], { timeoutMs: 120_000 })
+    if (r.exitCode !== 0) throw new Error(`copy failed: ${r.stderr.slice(0, 200)}`)
+  } else {
+    await $.process.run(['mkdir', '-p', dir]).catch(() => undefined)
+    const r = await $.process.run(['cp', from, to], { timeoutMs: 120_000 })
+    if (r.exitCode !== 0) throw new Error(`copy failed: ${r.stderr.slice(0, 200)}`)
+  }
 }
 
 type CopyOptions = { isCurrent: boolean; isFinal: boolean }
@@ -389,7 +396,7 @@ async function search($: EngineInterface, args: string) {
     } catch {}
     for (const n of picks) {
       const e = some[Number(n) - 1]
-      if (!e || hits.some(h => h.e.id === e.id)) continue
+      if (!e || hits.some(x => x.e.id === e.id)) continue
       const body = await textOf($, e)
       hits.push({ e, snip: snippet(body, words) || e.summary })
     }
