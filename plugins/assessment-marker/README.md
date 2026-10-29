@@ -8,6 +8,12 @@ This mod is that process, so I don't have to paste a giant prompt and re-explain
 The bar is always HD (85+). It doesn't ask what grade you're aiming for, and it doesn't go easy because the due date
 is close. It's strict on purpose: the point is to find the problems before the real marker does.
 
+To install:
+
+```
+/plugin install assessment-marker --marketplace Akash001uts/claude-mods
+```
+
 ## How it works
 
 - **First run:** one question, where to keep your reviews: a folder in each subject (`outputs/_audits`), chat only,
@@ -50,8 +56,9 @@ is close. It's strict on purpose: the point is to find the problems before the r
   question box: where to keep reviews. It only asks on its own until you answer or close it (closing keeps the
   default folder).
 - **What it sends to Claude.** `/mark`, `/mark ready` and `/mark setup` each submit one short prompt asking Claude
-  to run the matching skill. The prompt only has that request and the skill's name. Nothing is submitted unless you
-  run one of them.
+  to run the matching skill. The prompt is fixed text: that request and the skill's name, nothing else. Nothing the
+  mod reads (the subject file, your files, plugin storage) ever goes into a prompt it submits. Nothing is submitted
+  unless you run one of them.
 - **What it reads.** To find your subject, it checks the folder Claude Code is open in, and up to 7 folders above
   it, for `.assessment-marker/subject.json`, and reads only that file's subject name. It checks the file's size and
   modified time whenever Claude Code builds its system prompt and re-reads it only when it changed.
@@ -67,6 +74,20 @@ is close. It's strict on purpose: the point is to find the problems before the r
   changes your submission files while marking.
 - Nothing is sent anywhere outside Claude Code. It doesn't register tools or change your settings. Delete a subject's
   `.assessment-marker` folder to start that subject over.
+
+## What each hook does
+
+The mod is one file, `hooks/register.ts`. It hooks these events and nothing else:
+
+- `session.start`: registers the `/mark` command, looks for the subject folder, and in the first interactive session
+  asks the one save question.
+- `prompt.compose`: adds its one section (described above) to the end of the system prompt. It doesn't change or
+  remove anything else in the system prompt, your instructions, other plugins' sections or tool descriptions.
+- `command.run` (for `/mark` only): checks the argument and submits the fixed prompt for that stage. Any other
+  argument just shows the usage line.
+
+It never runs commands or processes, writes your files, makes network requests, registers tools or answers tool
+calls.
 
 ## Licence
 
