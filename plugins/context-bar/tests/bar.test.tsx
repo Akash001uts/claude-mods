@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { ContextCategory, SessionUsage } from 'claude-code'
 
-import { INTRO, allocate } from '../hooks/register'
+import { INTRO, allocate, infoLine, runsOutIn, turnCost } from '../hooks/register'
 
 const row = (name: string, tokens: number, color: string, kind: ContextCategory['kind']): ContextCategory => ({
   name,
@@ -158,6 +158,36 @@ test('third line shows rate limits, room before compaction and session length', 
   expect(await ui.find({ type: 'Text', text: /to compact/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /30%/ })).toBeDefined()
   await ui.unmount()
+})
+
+const DAY = 24 * HOUR
+
+test('the weekly pace shows only when it runs out before the reset', () => {
+  const at = 10 * DAY
+  // Four days in, 80% used: the last 20% goes in one more day, two days before the reset.
+  const fast = { kind: 'seven_day', percentUsed: 80, resetsAt: at + 3 * DAY }
+  expect(runsOutIn(fast, at)).toBe(DAY)
+  expect(infoLine({ segments: [], total: 0, max: 0, percent: 0, startedAt: 0, limits: [fast] }, at)).toBe(
+    '7d 80% (out in 1d 0h at this pace, resets in 3d 0h)',
+  )
+  // Lasts to the reset.
+  expect(runsOutIn({ ...fast, percentUsed: 40 }, at)).toBeUndefined()
+  // Too early in the week to project, nothing used, used up, no reset time, or not the weekly window.
+  expect(runsOutIn({ ...fast, resetsAt: at + 6.5 * DAY }, at)).toBeUndefined()
+  expect(runsOutIn({ ...fast, percentUsed: 0 }, at)).toBeUndefined()
+  expect(runsOutIn({ ...fast, percentUsed: 100 }, at)).toBeUndefined()
+  expect(runsOutIn({ kind: 'seven_day', percentUsed: 80 }, at)).toBeUndefined()
+  expect(runsOutIn({ ...fast, kind: 'five_hour' }, at)).toBeUndefined()
+})
+
+test('the last turn line prints cost and the limits it moved', () => {
+  const base = { model: 'm', input: 1, output: 2, cacheRead: 3, cacheWrite: 4 }
+  expect(turnCost({ ...base, usd: 0.123, limits: [{ kind: 'five_hour', delta: 2 }, { kind: 'seven_day', delta: 0.4 }] })).toBe(
+    '≈ $0.12 at API prices  ·  5h +2%  ·  7d +0.4% (limits since the turn started, other sessions included)',
+  )
+  expect(turnCost({ ...base, usd: 0.5, limits: [] })).toBe('≈ $0.50 at API prices')
+  // Off a subscription with no cost ledger: nothing to print.
+  expect(turnCost({ ...base, limits: [] })).toBe('')
 })
 
 test('no third line off a subscription with compaction off', async ($, on) => {

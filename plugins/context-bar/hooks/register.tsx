@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, ResolveInput, SessionRateLimit } from 'claude-code'
+import type { EngineInterface, Register, ResolveInput, SessionRateLimit, TurnUsage } from 'claude-code'
 
-import type { Details, Limit, Row, Segment, Snapshot } from '../types'
+import type { Details, LastTurn, Limit, Row, Segment, Snapshot } from '../types'
 
 // On at the start of every session; /context-bar hides it for that session only.
 const isOn = atom({ plugin: 'context-bar', key: 'isOn' } as const, true)
@@ -10,6 +10,7 @@ const snapshot = atom({ plugin: 'context-bar', key: 'snapshot' } as const, null)
 const now = atom({ plugin: 'context-bar', key: 'now' } as const, 0)
 const details = atom({ plugin: 'context-bar', key: 'details' } as const, null)
 const isDetailsOpen = atom({ plugin: 'context-bar', key: 'isDetailsOpen' } as const, false)
+const lastTurn = atom({ plugin: 'context-bar', key: 'lastTurn' } as const, null)
 
 const PANE = 'context-details'
 const GLYPH = { used: '█', buffer: '▒', free: '░' } as const
@@ -28,11 +29,26 @@ export const span = (ms: number) => {
   return `${Math.floor(hours / 24)}d ${hours % 24}h`
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60_000
+
+// How long until the weekly limit runs out at the pace used so far this week, or undefined when it lasts to the
+// reset. Quiet for the first tenth of the week and at 0%, where one busy hour would project wildly.
+export const runsOutIn = (l: Limit, at: number): number | undefined => {
+  if (l.kind !== 'seven_day' || l.resetsAt === undefined || l.percentUsed <= 0 || l.percentUsed >= 100) return undefined
+  const left = l.resetsAt - at
+  const elapsed = WEEK_MS - left
+  if (left <= 0 || elapsed < WEEK_MS / 10) return undefined
+  const outIn = ((100 - l.percentUsed) * elapsed) / l.percentUsed
+  return outIn < left ? outIn : undefined
+}
+
 // The band's third line: rate limits, room before compaction, session length.
 export const infoLine = (snap: Snapshot, at: number) => {
   const parts = snap.limits.map(l => {
     const label = LIMIT_LABEL[l.kind] ?? l.kind
-    const reset = l.resetsAt !== undefined && l.resetsAt > at ? ` (resets in ${span(l.resetsAt - at)})` : ''
+    const out = runsOutIn(l, at)
+    const pace = out !== undefined ? `out in ${span(out)} at this pace, ` : ''
+    const reset = l.resetsAt !== undefined && l.resetsAt > at ? ` (${pace}resets in ${span(l.resetsAt - at)})` : ''
     return `${label} ${l.percentUsed}%${reset}`
   })
   if (snap.compactIn !== undefined) parts.push(`${short(snap.compactIn)} to compact`)
@@ -71,6 +87,38 @@ const tail = (path: string) => {
 }
 
 const byTokens = (a: Row, b: Row) => b.tokens - a.tokens
+
+// The last turn's cost and how far each limit moved, as the details pane prints it under the token counts.
+export const turnCost = (turn: LastTurn) => {
+  const parts = turn.usd !== undefined ? [`≈ $${turn.usd.toFixed(2)} at API prices`] : []
+  for (const l of turn.limits) parts.push(`${LIMIT_LABEL[l.kind] ?? l.kind} +${l.delta}%`)
+  const moved = turn.limits.length > 0 ? ' (limits since the turn started, other sessions included)' : ''
+  return parts.length > 0 ? `${parts.join('  ·  ')}${moved}` : ''
+}
+
+// Cost and limits as the main loop's turn began, for what the turn used.
+let turnStart: { usd?: number; limits: Limit[] } | undefined
+
+async function recordTurn($: EngineInterface, used: TurnUsage) {
+  const start = turnStart
+  turnStart = undefined
+  const usage = await $.session.usage()
+  const turn: LastTurn = {
+    model: used.model,
+    input: used.input_tokens,
+    output: used.output_tokens,
+    cacheRead: used.cache_read_input_tokens,
+    cacheWrite: used.cache_creation_input_tokens,
+    limits: [],
+  }
+  if (start?.usd !== undefined && usage.cost) turn.usd = Math.max(0, usage.cost.usd - start.usd)
+  for (const l of usage.rateLimits) {
+    const before = start?.limits.find(b => b.kind === l.kind)
+    // A window that reset during the turn went down, and says nothing about the turn.
+    if (before && l.percentUsed >= before.percentUsed) turn.limits.push({ kind: l.kind, delta: Math.round((l.percentUsed - before.percentUsed) * 10) / 10 })
+  }
+  await update($, lastTurn, () => turn)
+}
 
 let lastFetch = 0
 let isFetching = false
@@ -216,12 +264,13 @@ async function move($: EngineInterface, where: 'above' | 'below') {
 }
 
 // Shown once after install, and again when INTRO_VERSION goes up for a feature worth telling people about.
-const INTRO_VERSION = '0.3'
+const INTRO_VERSION = '0.5'
 export const INTRO = [
   'context-bar: the bar above the prompt shows how full your context window is, split by /context category.',
   '  Line 2 is the token count for each category; line 3 shows rate limits, tokens left before auto-compact and session length.',
+  '  When this week\'s pace would use up your 7-day limit before it resets, line 3 says how long you have left.',
   '  /context-bar hides or shows it for this session.',
-  '  /context-bar details opens a full token breakdown (memory files, MCP servers, skills, cache).',
+  '  /context-bar details opens a full token breakdown (memory files, MCP servers, skills, cache) and what the last turn used.',
   '  /context-bar below moves the bar under the prompt box, /context-bar above moves it back.',
   '  /context-bar help shows this again.',
 ]
@@ -285,10 +334,22 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // The plain usage read is free; it marks where the main loop's turn started from.
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      const usage = await $.session.usage().catch(() => undefined)
+      turnStart = usage && { usd: usage.cost?.usd, limits: usage.rateLimits.map(toLimit) }
+    }
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
     void refresh($, true)
     if (await read($, isDetailsOpen)) void refreshDetails($).catch(() => {})
-    return next(e)
+    const used = result.usage ?? e.usage
+    if (e.agentId === undefined && used) void recordTurn($, used).catch(() => {})
+    return result
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -328,6 +389,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const d = await read($, details)
+    const turn = await read($, lastTurn)
     const refreshButton = <Button key="refresh" label="Refresh" hotkey="r" dimColor onPress={() => refreshDetails($).catch(() => {})} />
     if (!d)
       return (
@@ -397,6 +459,17 @@ export const register: Register = (on, options) => {
               {'  '}cache read {short(d.api.cacheRead)}  ·  cache write {short(d.api.cacheWrite)}  ·  uncached {short(d.api.uncached)}  ·  output{' '}
               {short(d.api.output)}
             </Text>
+          </Box>
+        ) : null}
+        {turn ? (
+          <Box flexDirection="column" marginTop={1}>
+            <Text bold>
+              Last turn<Text dimColor>  {turn.model}</Text>
+            </Text>
+            <Text dimColor>
+              {'  '}in {short(turn.input)}  ·  cache read {short(turn.cacheRead)}  ·  cache write {short(turn.cacheWrite)}  ·  out {short(turn.output)}
+            </Text>
+            {turnCost(turn) ? <Text dimColor>  {turnCost(turn)}</Text> : null}
           </Box>
         ) : null}
         <Box marginTop={1}>{refreshButton}</Box>

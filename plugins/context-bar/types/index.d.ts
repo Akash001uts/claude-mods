@@ -25,8 +25,27 @@ export type Details = {
   api: { uncached: number; cacheRead: number; cacheWrite: number; output: number } | null
 }
 
+// What the last main-loop turn used. `usd` and `limits` are the change since the turn started, so other
+// sessions and claude.ai drawing on the same limits in that time count too.
+export type LastTurn = {
+  model: string
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
+  usd?: number
+  limits: { kind: string; delta: number }[]
+}
+
 declare module 'claude-code' {
   interface PluginState {
-    'context-bar': { isOn: boolean; snapshot: Snapshot | null; now: number; details: Details | null; isDetailsOpen: boolean }
+    'context-bar': {
+      isOn: boolean
+      snapshot: Snapshot | null
+      now: number
+      details: Details | null
+      isDetailsOpen: boolean
+      lastTurn: LastTurn | null
+    }
   }
 }
