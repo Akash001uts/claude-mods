@@ -71,6 +71,13 @@ else:
   commands (or refuses them), and after a command runs, adds a note for Claude when its output took 25% or more of
   the context left. If the hook itself fails before the command runs, the command is refused rather than let through
   unchecked.
-- `tool.check` (Read only): asks you before a read that would take 25% or more of the context left. It never allows
-  anything Claude Code wouldn't.
+  - **Which tool input it changes, and how.** Only the `command` of a Bash or PowerShell call, only when it's a
+    `git commit` or a `gh pr create` / `gh pr edit`, only with the attribution guard on in fix mode, and only to take
+    out `Co-Authored-By:` lines, "Generated with Claude Code" lines and claude.ai session links. Nothing else in the
+    command changes. Every other call, and every other tool, is passed on unchanged with `next(e)`.
+- `tool.check` (Read only): **what it decides and when.** With the big-reads guard on, when the main session (not a
+  subagent) is about to read a text file that would take 25% or more of the context left, it answers `ask`, so
+  Claude Code shows you its own permission prompt with the reason and you decide. It never answers `allow`. If your
+  own rules already deny that read, it stays denied. Every other read is passed on unchanged with `next(e)`, so your
+  rules and permission mode decide as usual.
 - `command.run` (`/guards` only): answers the command.
