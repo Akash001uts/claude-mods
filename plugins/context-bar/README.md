@@ -36,6 +36,21 @@ what's eating my context, like MCP servers I forgot were still connected.
   or below) and a note that you've seen the rundown, both in the plugin's own storage. It doesn't change your Claude
   Code settings or environment variables.
 
+## What each hook does
+
+The mod is one file, `hooks/register.tsx`. It hooks these events and nothing else:
+
+- `session.start`: registers the `/context-bar` command, prints the command rundown the first time, and starts a
+  once-a-minute clock tick so the session length and reset countdowns stay current.
+- `command.run` (for `/context-bar` only): toggles the bar, moves it above or below, opens the details pane or shows help.
+- `session.measure` and `turn.complete`: re-read the session's usage numbers so the bar is current. While the details
+  pane is open, `turn.complete` also refreshes the full breakdown.
+- `ui.render` for the area above the prompt, the hint line under it, and its own details pane: draws the bar or the
+  pane. Anything else drawn there by Claude Code or other plugins still shows.
+- `ui.close`: notes that the details pane was closed, so it stops refreshing.
+
+It never runs commands or processes, reads or writes your files, makes network requests, or answers tool calls.
+
 ## Licence
 
 MIT
