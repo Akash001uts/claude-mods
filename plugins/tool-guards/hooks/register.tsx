@@ -198,8 +198,9 @@ export const register: Register = on => {
     const tokens = Math.ceil(chars / CHARS_PER_TOKEN)
     const room = await left($).catch(() => undefined)
     if (room === undefined || tokens < room * SHARE) return next(e)
-    const verdict = await next(e)
-    if (verdict.decision === 'deny') return { decision: 'deny', reason: verdict.reason }
+    // The user's own rules for this read, asked without running it (this hook is skipped there).
+    const rules = await $.tool.check({ tool: 'Read', input: e.input })
+    if (rules.decision === 'deny') return { decision: 'deny', reason: 'Your own permission rules deny this read.' }
     const pct = Math.round((tokens / room) * 100)
     tell(s, $, `asked before a read of about ${pct}% of the context left`)
     return {
