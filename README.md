@@ -212,7 +212,7 @@ setup and stays on your machine.
 
 ## What they run and store
 
-None of them send anything outside Claude Code (voice-profile reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors). context-bar only reads the same usage numbers `/context` shows,
+Only needs-you sends anything outside Claude Code (its pings, to your own Slack DM through the claude.ai connector), and only session-archive runs a process (the system's copy command, for a transcript over 4 MiB). voice-profile reads Gmail, Slack or LinkedIn only if you tick them, through your own connectors. context-bar only reads the same usage numbers `/context` shows,
 auto-handoff adds one hidden line to each prompt and runs `/compact` during a handoff, pinned-notes adds your pins to
 the system prompt and saves them in plugin storage, voice-profile adds your profile to the system prompt, and assessment-marker adds a short note about the subject you're in and keeps its reviews in that subject's folder. session-archive copies transcripts into the folder you choose and sends titles and summaries through small Haiku calls, coach adds notes for Claude and makes one small yes/no call for its done-check, tool-guards refuses or rewrites some commands, needs-you sends pings to your own Slack DM through the claude.ai connector, and application-assistant reads your inbox and resumes only through its skills, when you ask. Each plugin's own README has
 the full list: [context-bar](plugins/context-bar/README.md#what-it-runs-and-stores),
