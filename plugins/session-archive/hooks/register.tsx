@@ -81,9 +81,9 @@ export async function readAll($: EngineInterface, s: Settings): Promise<Entry[]>
     try {
       some = text ? (JSON.parse(text) as Record<string, Entry>) : {}
     } catch {}
-    for (const e of Object.values(some)) {
-      const had = merged.get(e.id)
-      if (!had || had.ended < e.ended) merged.set(e.id, e)
+    for (const entry of Object.values(some)) {
+      const had = merged.get(entry.id)
+      if (!had || had.ended < entry.ended) merged.set(entry.id, entry)
     }
   }
   return [...merged.values()].sort((a, b) => b.ended - a.ended)
@@ -125,22 +125,17 @@ async function isWindows($: EngineInterface) {
   return (await $.env.get('OS')) === 'Windows_NT'
 }
 
-// A transcript over 4 MiB can't pass through $.fs, so the system copies it.
+// A transcript over 4 MiB can't pass through $.fs, so one copy program copies it: xcopy on Windows, cp elsewhere,
+// run by name with fixed flags, no shell. $.fs.write first makes the folder and an empty file there, so xcopy sees
+// a file to overwrite and never asks whether the target is a file or a folder.
 async function bigCopy($: EngineInterface, from: string, to: string) {
-  const dir = to.slice(0, to.lastIndexOf('/'))
+  await $.fs.write(to, '')
   const isWin = await isWindows($)
   const win = (path: string) => path.replace(/\//g, '\\')
-  // The folder may not exist yet (a new project); mkdir fails harmlessly when it does. On Windows mkdir and copy are
-  // built into cmd, so cmd runs them.
-  if (isWin) {
-    await $.process.run(['cmd', '/c', 'mkdir', win(dir)]).catch(() => undefined)
-    const r = await $.process.run(['cmd', '/c', 'copy', '/y', win(from), win(to)], { timeoutMs: 120_000 })
-    if (r.exitCode !== 0) throw new Error(`copy failed: ${r.stderr.slice(0, 200)}`)
-  } else {
-    await $.process.run(['mkdir', '-p', dir]).catch(() => undefined)
-    const r = await $.process.run(['cp', from, to], { timeoutMs: 120_000 })
-    if (r.exitCode !== 0) throw new Error(`copy failed: ${r.stderr.slice(0, 200)}`)
-  }
+  const r = isWin
+    ? await $.process.run(['xcopy', '/y', '/q', win(from), win(to)], { timeoutMs: 120_000 })
+    : await $.process.run(['cp', from, to], { timeoutMs: 120_000 })
+  if (r.exitCode !== 0) throw new Error(`copy failed: ${(r.stderr || r.stdout).slice(0, 200)}`)
 }
 
 type CopyOptions = { isCurrent: boolean; isFinal: boolean }
@@ -272,7 +267,7 @@ async function backfill($: EngineInterface) {
   const s = await getSettings($)
   if (!s) return 'Set up first: /sessions setup.'
   const known = Object.values(await readOwn($, s))
-  const todo = (await onDisk($)).filter(f => !known.some(e => e.source.replace(/\\/g, '/') === f.path && e.size === f.size))
+  const todo = (await onDisk($)).filter(f => !known.some(k => k.source.replace(/\\/g, '/') === f.path && k.size === f.size))
   if (todo.length === 0) return 'Every session still on disk is already archived.'
   await queue($, todo.map(f => f.path))
   return `Archiving ${todo.length} session${todo.length === 1 ? '' : 's'} (${mb(todo.reduce((n, f) => n + f.size, 0))}) in the background. You'll see a line when it's done.`
@@ -285,10 +280,10 @@ async function catchUp($: EngineInterface) {
   if (!s) return
   const cutoff = (await $.clock.now()) - 14 * 86_400_000
   const stale: string[] = []
-  for (const e of Object.values(await readOwn($, s))) {
-    if (e.ended < cutoff) continue
-    const stat = await $.fs.stat(e.source).catch(() => undefined)
-    if (stat && stat.size !== e.size) stale.push(e.source)
+  for (const entry of Object.values(await readOwn($, s))) {
+    if (entry.ended < cutoff) continue
+    const stat = await $.fs.stat(entry.source).catch(() => undefined)
+    if (stat && stat.size !== entry.size) stale.push(entry.source)
   }
   if (stale.length) await queue($, stale)
 }
@@ -352,8 +347,8 @@ const snippet = (text: string, words: string[]) => {
   return `${from > 0 ? '…' : ''}${text.slice(from, at + 100).replace(/\s+/g, ' ').trim()}…`
 }
 
-async function textOf($: EngineInterface, e: Entry) {
-  for (const path of e.file ? [`${e.file}.md`, `${e.file}.jsonl`, e.source] : [e.source]) {
+async function textOf($: EngineInterface, entry: Entry) {
+  for (const path of entry.file ? [`${entry.file}.md`, `${entry.file}.jsonl`, entry.source] : [entry.source]) {
     const stat = await $.fs.stat(path).catch(() => undefined)
     if (stat?.kind === 'file' && stat.size <= MAX_READ) return $.fs.read(path).catch(() => '')
   }
@@ -369,20 +364,20 @@ async function search($: EngineInterface, args: string) {
   rest = rest.replace(/(^|\s)--(here|plain)(?=\s|$)/g, ' ').trim()
   if (!rest) return 'Usage: /sessions search [--here] [--plain] <words>'
   const root = (await $.session.root()).replace(/\\/g, '/').toLowerCase()
-  const all = (await readAll($, s)).filter(e => !here || e.root.replace(/\\/g, '/').toLowerCase() === root)
+  const all = (await readAll($, s)).filter(x => !here || x.root.replace(/\\/g, '/').toLowerCase() === root)
   if (all.length === 0) return 'Nothing archived yet.'
   const words = rest.toLowerCase().split(/\s+/).filter(Boolean)
-  let hits: { e: Entry; snip: string }[] = []
+  let hits: { entry: Entry; snip: string }[] = []
   if (plain) {
-    for (const e of all.slice(0, MAX_PLAIN)) {
-      const about = `${e.title} ${e.summary} ${e.keywords.join(' ')} ${e.project}`
-      const body = words.every(w => about.toLowerCase().includes(w)) ? about : await textOf($, e)
-      if (words.every(w => body.toLowerCase().includes(w))) hits.push({ e, snip: snippet(body, words) })
+    for (const entry of all.slice(0, MAX_PLAIN)) {
+      const about = `${entry.title} ${entry.summary} ${entry.keywords.join(' ')} ${entry.project}`
+      const body = words.every(w => about.toLowerCase().includes(w)) ? about : await textOf($, entry)
+      if (words.every(w => body.toLowerCase().includes(w))) hits.push({ entry, snip: snippet(body, words) })
       if (hits.length >= 10) break
     }
   } else {
     const some = all.slice(0, MAX_MEANING)
-    const list = some.map((e, i) => `${i + 1}. ${dayOf(e.ended)} | ${e.project} | ${e.title} | ${e.summary} | ${e.keywords.join(', ')}`).join('\n')
+    const list = some.map((x, i) => `${i + 1}. ${dayOf(x.ended)} | ${x.project} | ${x.title} | ${x.summary} | ${x.keywords.join(', ')}`).join('\n')
     const r = await $.model.complete({
       model: 'haiku',
       maxTokens: 200,
@@ -395,23 +390,23 @@ async function search($: EngineInterface, args: string) {
       picks = JSON.parse(r.text.slice(r.text.indexOf('['), r.text.lastIndexOf(']') + 1)) as number[]
     } catch {}
     for (const n of picks) {
-      const e = some[Number(n) - 1]
-      if (!e || hits.some(x => x.e.id === e.id)) continue
-      const body = await textOf($, e)
-      hits.push({ e, snip: snippet(body, words) || e.summary })
+      const entry = some[Number(n) - 1]
+      if (!entry || hits.some(x => x.entry.id === entry.id)) continue
+      const body = await textOf($, entry)
+      hits.push({ entry, snip: snippet(body, words) || entry.summary })
     }
   }
   if (hits.length === 0) return `No archived session matches "${rest}".${plain ? '' : ' Try --plain for exact words.'}`
   const now = await $.clock.now()
   const out: string[] = []
-  for (const [i, { e, snip }] of hits.entries()) {
-    const isThere = (await $.fs.stat(e.source).catch(() => undefined))?.kind === 'file'
+  for (const [i, { entry, snip }] of hits.entries()) {
+    const isThere = (await $.fs.stat(entry.source).catch(() => undefined))?.kind === 'file'
     const reopen = isThere
-      ? `claude --resume ${e.id}`
-      : e.file && s.format !== 'md'
-        ? `original deleted; copy ${e.file}.jsonl back to ${e.source}, then: claude --resume ${e.id}`
-        : `original deleted; read ${e.file ? `${e.file}.md` : 'nothing kept'}`
-    out.push(`${i + 1}. ${e.title} · ${e.project} · ${ago(e.ended, now)}${snip ? `\n   ${snip}` : ''}\n   ${reopen}`)
+      ? `claude --resume ${entry.id}`
+      : entry.file && s.format !== 'md'
+        ? `original deleted; copy ${entry.file}.jsonl back to ${entry.source}, then: claude --resume ${entry.id}`
+        : `original deleted; read ${entry.file ? `${entry.file}.md` : 'nothing kept'}`
+    out.push(`${i + 1}. ${entry.title} · ${entry.project} · ${ago(entry.ended, now)}${snip ? `\n   ${snip}` : ''}\n   ${reopen}`)
   }
   return out.join('\n')
 }
@@ -462,9 +457,9 @@ async function command($: EngineInterface, args: string) {
       const folder = rest.replace(/^["']|["']$/g, '').replace(/^~(?=$|[\\/])/, await home($)).replace(/\\/g, '/').replace(/\/+$/, '')
       // The index moves with the folder; old copies stay where they are.
       const own = await readOwn($, s)
-      const next: Settings = { ...s, folder }
-      await $.store.set('settings', next)
-      await writeOwn($, next, own)
+      const moved: Settings = { ...s, folder }
+      await $.store.set('settings', moved)
+      await writeOwn($, moved, own)
       return `New copies go to ${folder}. Copies already made stay in ${s.folder ?? 'place'}; move them yourself if you want them together.`
     }
     case 'format': {
