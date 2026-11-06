@@ -61,8 +61,8 @@ table in the mod, dated in the pane, and need updating when Anthropic changes th
   folder), `CLAUDE_CONFIG_DIR`, `COMPUTERNAME`/`HOSTNAME` (to name this PC's index file) and `OS`.
 - **What files it writes.** Only inside the archive folder you chose: the copies (`.jsonl` and/or `.md`),
   `index-<pc>.json` (its list of sessions with titles and stats) and a `README.txt`. With sessions left in place, just
-  the index, in `~/.claude/session-archive`. Before a big copy it writes an empty file where that copy goes, so the
-  folder exists and `xcopy` has a file to overwrite. It doesn't mean to edit any build, start-up, settings or
+  the index, in `~/.claude/session-archive`. Before a session's first big copy it writes an empty file where that copy
+  goes, so the folder exists and `xcopy` has a file to overwrite; a copy already there is never emptied. It doesn't mean to edit any build, start-up, settings or
   instructions file: none of these is one, and no tool runs or obeys them. The paths aren't fixed text because the
   folder is the one you pick at setup, and the file names come from the project, date, title and session id.
 - **What it sends and where.** It reads the conversation (the session's transcript) and local files (the transcripts
