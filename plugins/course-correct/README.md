@@ -60,7 +60,9 @@ Settings are per user: the same rules apply in every project.
   message (style heads-up), or as a follow-up message from course-correct (done-check, and style in rewrite mode). Each one
   starts with "course-correct:".
 - **What it puts in the prompts it submits.** It submits a prompt in two cases only, and neither carries the
-  conversation, a file or anything it read:
+  conversation, a file or anything it read. The only file it reads is the project's `package.json`, to see whether
+  there's a `test` script; that gives a yes or no that decides whether the done-check runs, and none of the file goes
+  in a prompt. The two prompts are:
   - The done-check, word for word: "course-correct: You said this works, but nothing has run since the files
     changed. Run it (tests, a build or the program itself), or say clearly that it is untested."
   - A style rewrite, only with `/coach rewrite` on: "course-correct: Your last reply used "<phrase>", which the user
@@ -75,10 +77,11 @@ Settings are per user: the same rules apply in every project.
 The mod is `hooks/register.tsx`, with the checks in `hooks/checks.ts`. It hooks these events and nothing else:
 
 - `session.start`: registers `/coach`, asks the first-run questions once, and looks for tests in the project.
-- `classic.SessionStart`: with the done-check on, asks Claude Code to watch the project folder (`watchPaths`), so
-  changes made outside Claude count. It passes the event on with `next(e)` and returns that result unchanged apart
-  from adding the project folder to `watchPaths`. It takes no permission decision and changes no settings,
-  instructions or other hooks' output.
+- `classic.SessionStart`: with the done-check off, it passes the event on with `return next(e)` and does nothing
+  else. With it on, it asks Claude Code to watch the project folder (`watchPaths`), so changes made outside Claude
+  count: it returns a plain object that copies each field `next(e)` gave back as it was (the session's first message,
+  title, context and the rest) and adds the project folder to `watchPaths`. It never sets or changes the first
+  message, takes no permission decision and changes no settings, instructions or other hooks' output.
 - `classic.FileChanged`: notes the changed file's name. Changes nothing.
 - `tool.call`: lets every call run as it is, then reads what came back. For a repeated error or edit, or code that
   breaks your style rules, it adds a note for Claude to the result. The result itself is never changed.
