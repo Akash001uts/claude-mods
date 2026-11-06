@@ -77,9 +77,36 @@ fill in at setup, and it lives on your machine.
   - Employer application pages, only when you run `/apply fill`: Claude types your details into the form in your own
     Chrome, asks before entering personal details, never types passwords or ID numbers, and never submits.
 - **What it creates.** One scheduled cloud routine, at setup, only if you say yes.
-- **What it submits as a prompt.** Fixed text naming one of its skills: after you say yes to setup, after an `/apply`
-  command, or at session start in your applications folder when the day's scan didn't run. Each one is written out in
-  `hooks/register.tsx` (`NUDGE`), with only your `/apply` arguments added.
+- **What it puts in the prompts it submits.** Fixed text naming one of its skills, plus only what you typed after
+  `/apply`. These are all of them, word for word (`[...]` is what you typed):
+
+  ```
+  After you pick "Set it up now", or /apply setup:
+  Use the application-assistant:setup skill. Set up or edit my application-assistant profile.
+
+  At session start in your applications folder, only when the day's scan didn't run:
+  Use the application-assistant:check skill. The scheduled scan didn't run today, so scan now (roles only, then the inbox sweep), and update the tracker.
+
+  /apply <link>:
+  Use the application-assistant:role skill. Check this role against my profile and, if it fits, build its application pack: [the link]
+
+  /apply check:
+  Use the application-assistant:check skill. Scan for new roles, sweep my inbox for replies, update my tracker and show me a short table of what changed.
+
+  /apply ready <role>:
+  Use the application-assistant:ready skill. Run the pre-submit check for this role: [the role]
+
+  /apply fill <role>:
+  Use the application-assistant:fill skill. Fill the application form in Chrome for this role, and stop before submit: [the role]
+
+  /apply review:
+  Use the application-assistant:review skill. Run my weekly application review now.
+  ```
+
+  If you type more words after `check`, `review` or `setup`, they're added on the end too. Nothing the mod reads goes
+  into a prompt: the contents of `config.json` and `reminders.json` only feed the rundown it shows you and the band
+  above the prompt, and config.json only decides whether the missed-scan prompt is sent. Your environment variables
+  and folder paths stay out as well. Claude then does the work through the skills, with your usual permission prompts.
 - **What it asks.** Whether to set up, once.
 - **What it stores.** That it already offered setup, in Claude Code's plugin storage.
 
@@ -94,3 +121,5 @@ The mod is `hooks/register.tsx` plus six skills. It hooks these events and nothi
 - `command.run` (`/apply` only): shows the rundown, or starts the matching skill.
 - `ui.render` (above the prompt, only in your applications folder): draws reminders due in the next week above
   whatever else draws there.
+- `prompt.submit`: it doesn't hook this. It only calls it to send the prompts listed under "What it puts in the
+  prompts it submits", and it doesn't see or change your own prompts.
