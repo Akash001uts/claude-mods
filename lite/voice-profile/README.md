@@ -97,6 +97,8 @@ If another plugin also has a `write` skill, use `/voice-profile-lite:write` (and
 - No hooks, no shell commands, no tools or agents of its own, no plugin storage. Delete the profile file to start
   over.
 
+[Privacy](PRIVACY.md): what it reads and stores, where, who it's shared with and how to delete it.
+
 ## Licence
 
 MIT
