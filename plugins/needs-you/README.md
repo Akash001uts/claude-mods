@@ -59,12 +59,20 @@ session. No bot, no tokens of your own.
 
 - **What it reads.** Claude's replies, questions and permission prompts (to ping you about them), your replies in
   your Slack DM (only from your own Slack user), your Slack profile (your user id and first name), which commands you
-  approve (for the counter), and the list of connected tools (to find the Slack connector).
-- **What it sends.** The ping's text (your first name, the session's folder name, what Claude is waiting on, and
-  Claude's reply or question) to your own Slack DM through the claude.ai Slack connector, only after the wait. Without
-  Slack, a short push through Claude Code's PushNotification tool.
+  approve (for the counter), the list of connected tools (to find the Slack connector), and the session's id.
+- **The session id.** It reads the session's id (`session.id`) only to remember which session a ping came from, so a
+  Slack reply goes back to the right session. The id is kept in Claude Code's plugin storage next to the ping. It's
+  never sent to Slack, never in a push and never in a prompt.
 - **What it sends and where.** It reads the conversation (what Claude is waiting on) and sends it out in one way only:
-  the Slack connector's `slack_send_message` tool, to your own Slack DM, after the wait. Nothing goes anywhere else.
+  the Slack connector's `slack_send_message` tool (called through `mcp.call`), to your own Slack DM, after the wait.
+  The ping's text is your first name, the session's folder name, what Claude is waiting on, and Claude's reply or
+  question. Without Slack, a short push through Claude Code's `PushNotification` tool instead ("<folder> has finished
+  and is waiting for you", "<folder> is asking permission to run <command>", or "<folder> has a question for you").
+  Nothing goes anywhere else.
+- **What it fetches and what it runs.** It fetches nothing from the network itself. Its only calls out are the Slack
+  connector's tools below, through `mcp.call`, and they only talk to Slack. It runs no commands, no shell and no
+  agents. The one built-in tool it calls is `PushNotification`, named as fixed text. Its `tool.call` hook only watches
+  calls: it starts a question's wait and closes waits when a call ends, and passes every call on unchanged.
 - **Which tools it calls itself, and when.** It calls these tools itself, without the model asking:
   - The Slack connector's tools, found by name in your connected tools: `slack_read_user_profile` once (your user id
     and first name), `slack_send_message` for each ping and its short replies ("→ <session>", "Already answered on
@@ -78,11 +86,15 @@ session. No bot, no tokens of your own.
   - Permission, on a "no": "needs-you: The user denied `<command>` from Slack. Don't run it. Carry on another way, or
     stop and say what you need."
   - Question: "needs-you: The user answered your question from Slack, picking "<option>": <your reply>".
-  Each one only after stopping the turn that was waiting (for a permission or a question). Nothing else goes in.
-- **Credentials.** It reads none. Slack goes through your claude.ai Slack connector, which Claude Code signs in to;
-  the mod never sees a token, password or key.
-- **What it decides.** Nothing. It never approves or denies a permission: its permission hook only notes that a prompt
-  is showing and passes it on unchanged.
+  Each one only after stopping the turn that was waiting (for a permission or a question). Nothing else goes in: no
+  session id and nothing else read from your machine.
+- **Credentials.** It reads none. It doesn't read environment variables, config files or keychains, and it has no
+  settings for a token. Slack goes through your claude.ai Slack connector, which Claude Code signs in to; the mod
+  never sees a token, password or key. The only Slack details it reads are your user id and first name (from
+  `slack_read_user_profile`), to address the DM and say hi.
+- **What it decides.** Nothing. It never approves or denies a permission. Its `classic.PermissionRequest` hook runs
+  when Claude Code shows you a permission prompt: it notes that the prompt is showing (to start the wait and for the
+  counter) and passes the request on unchanged with `next(e)`, so you answer it on your machine as usual.
 - **What it stores.** Your settings, your Slack user id, first name and DM channel, the waiting pings (so several
   sessions share one DM), the Slack messages it already handled, and the approval counts, in Claude Code's plugin
   storage.
