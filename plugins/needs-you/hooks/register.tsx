@@ -109,7 +109,11 @@ async function ping($: EngineInterface, w: Wait) {
   }
   // Without Slack, Claude Code's own push to the Claude app (one way; needs Remote Control on).
   const short = w.kind === 'turn' ? `${session} has finished and is waiting for you.` : w.kind === 'permission' ? `${session} is asking permission to run ${w.text.slice(0, 80)}.` : `${session} has a question for you.`
-  await $.tool.call({ tool: 'PushNotification', message: short, status: 'proactive' } as Parameters<EngineInterface['tool']['call']>[0]).catch(() => undefined)
+  try {
+    await $.tool.call({ tool: 'PushNotification', message: short, status: 'proactive' })
+  } catch {
+    // No push transport: nothing else to do.
+  }
   w.pingTs = 'push'
 }
 
