@@ -1,0 +1,10 @@
+{
+  "name": "auto-handoff-lite",
+  "displayName": "Auto Handoff (lite)",
+  "version": "1.0.0",
+  "description": "Hands a long session off cleanly: /wrap-up updates the project's docs, writes a handoff file with a kickoff prompt, and gives you the exact /compact line to paste. /handoff resume picks the work back up in a fresh session",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}

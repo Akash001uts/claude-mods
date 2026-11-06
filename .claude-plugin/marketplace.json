@@ -66,6 +66,54 @@
       "source": "./plugins/application-assistant",
       "description": "Job and internship applications: a daily role scan, eligibility checks against your own profile, application packs, form filling in Chrome for you to submit, a tracker kept up to date from your inbox, and reminders",
       "version": "0.1.0"
+    },
+    {
+      "name": "auto-handoff-lite",
+      "source": "./lite/auto-handoff",
+      "description": "Hands a long session off cleanly: /wrap-up updates the project's docs, writes a handoff file with a kickoff prompt, and gives you the exact /compact line to paste. /handoff resume picks the work back up in a fresh session (Code-free version of auto-handoff: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "pinned-notes-lite",
+      "source": "./lite/pinned-notes",
+      "description": "Pin notes, files and rules with /pin: they go in a marked block in the project's CLAUDE.local.md (or ~/.claude/CLAUDE.md with --global), so Claude loads them every session and after compaction until you /unpin them (Code-free version of pinned-notes: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "voice-profile-lite",
+      "source": "./lite/voice-profile",
+      "description": "Drafts and edits messages in your own voice. /write setup learns how you write from the sources you tick (Gmail, Slack, LinkedIn posts, assignments), then plain requests like \"reply to this recruiter\" come out sounding like you. Code-free version. (Code-free version of voice-profile: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "assessment-marker-lite",
+      "source": "./lite/assessment-marker",
+      "description": "Marks your uni assessments against the real rubric with High Distinction as the bar: a strict nine-section review, re-marks that catch regressions, a check before you submit, and it learns what each subject's marker cares about. Code-free version: skills only (Code-free version of assessment-marker: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "session-archive-lite",
+      "source": "./lite/session-archive",
+      "description": "/sessions: copy your Claude Code sessions into an archive folder before the 30-day cleanup (when you ask), title and index them, search them by meaning or plain text, print usage stats, and raise cleanupPeriodDays with your OK (Code-free version of session-archive: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "course-correct-lite",
+      "source": "./lite/course-correct",
+      "description": "Code-free version. A check at the end of each reply sends Claude back when it says code works without having run it, or uses a stock phrase like \"You're absolutely right\". /coach keeps your own bans, comment limit and reply language, and offers a CLAUDE.md block with the rules, including stopping after the same error twice (Code-free version of course-correct: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "tool-guards-lite",
+      "source": "./lite/tool-guards",
+      "description": "Stops Claude editing files through the shell (so /rewind works) and keeps its attribution out of your commits and PRs. Code-free version: a small model check on each shell command, plus /guards for settings (Code-free version of tool-guards: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
+      "name": "application-assistant-lite",
+      "source": "./lite/application-assistant",
+      "description": "Job and internship applications, code-free: /apply rundown with what's due, role scans, eligibility checks against your own profile, application packs, form filling in Chrome for you to submit, and a tracker kept up to date from your inbox (Code-free version of application-assistant: install one or the other, not both.)",
+      "version": "1.0.0"
     }
   ]
 }

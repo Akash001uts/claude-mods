@@ -1,0 +1,10 @@
+{
+  "name": "session-archive-lite",
+  "version": "1.0.0",
+  "description": "/sessions: copy your Claude Code sessions into an archive folder before the 30-day cleanup (when you ask), title and index them, search them by meaning or plain text, print usage stats, and raise cleanupPeriodDays with your OK",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT",
+  "privacyPolicyUrl": "https://github.com/Akash001uts/claude-mods/blob/release-session-archive-lite/lite/session-archive/PRIVACY.md"
+}

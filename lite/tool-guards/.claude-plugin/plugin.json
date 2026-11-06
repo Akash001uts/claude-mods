@@ -1,0 +1,9 @@
+{
+  "name": "tool-guards-lite",
+  "version": "1.0.0",
+  "description": "Stops Claude editing files through the shell (so /rewind works) and keeps its attribution out of your commits and PRs. Code-free version: a small model check on each shell command, plus /guards for settings",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}

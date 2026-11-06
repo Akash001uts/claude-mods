@@ -1,0 +1,9 @@
+{
+  "name": "course-correct-lite",
+  "version": "1.0.0",
+  "description": "Code-free version. A check at the end of each reply sends Claude back when it says code works without having run it, or uses a stock phrase like \"You're absolutely right\". /coach keeps your own bans, comment limit and reply language, and offers a CLAUDE.md block with the rules, including stopping after the same error twice",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}

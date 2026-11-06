@@ -1,0 +1,9 @@
+{
+  "name": "pinned-notes-lite",
+  "version": "1.0.0",
+  "description": "Pin notes, files and rules with /pin: they go in a marked block in the project's CLAUDE.local.md (or ~/.claude/CLAUDE.md with --global), so Claude loads them every session and after compaction until you /unpin them",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT"
+}

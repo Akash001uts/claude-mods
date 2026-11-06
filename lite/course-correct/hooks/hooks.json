@@ -1,0 +1,16 @@
+{
+  "description": "course-correct: one check of Claude's final reply at each stop (done without running it, built-in banned phrases)",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "timeout": 30,
+            "prompt": "You check Claude's final reply for the course-correct plugin. Event JSON: $ARGUMENTS\n\nIf stop_hook_active is true, answer {\"ok\": true} and nothing else. Otherwise judge only last_assistant_message.\n\nA. Done without checking. All three must hold: (1) the reply says Claude changed code or files (edited, wrote, fixed, added); (2) it says the work is done, fixed or working; (3) it reports no run result (tests, a build, a type check, a linter, running the program and what came out) and does not say it is untested. Answers, explanations, plans, questions, and non-code work like emails, drafts or docs never count.\nB. Banned phrase. The reply contains any of these, as whole words, ignoring case and straight or curly apostrophes: \"You're absolutely right\", \"belt-and-suspenders\", \"belt and suspenders\", \"Great question\", \"I hope this helps\", \"Let me know if you'd like\", \"rest assured\", \"It's worth noting\".\n\nIf neither, answer {\"ok\": true}. If A, the reason is: course-correct: You said this works, but nothing shows it was run since the files changed. Run it (tests, a build or the program itself), or say clearly that it is untested. If B, the reason is: course-correct: Your last reply used \"<the phrase>\", which the user asked you not to use. Restate only the sentence that had it, without the phrase, in one line, and avoid it from now on. If both, put both reasons in one. Answer only JSON: {\"ok\": false, \"reason\": \"...\"}. Never set impossible."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "application-assistant-lite",
+  "version": "1.0.0",
+  "description": "Job and internship applications, code-free: /apply rundown with what's due, role scans, eligibility checks against your own profile, application packs, form filling in Chrome for you to submit, and a tracker kept up to date from your inbox",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT",
+  "privacyPolicyUrl": "https://github.com/Akash001uts/claude-mods/blob/release-application-assistant-lite/lite/application-assistant/PRIVACY.md"
+}

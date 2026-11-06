@@ -39,6 +39,28 @@ You can install just the ones you want. You need a recent Claude Code build that
 
 To get new versions, run `/plugin marketplace update akash-mods`.
 
+## Lite versions (no code)
+
+In November 2026 the plugin directory started accepting mods (plugins with code) only from Verified organisations, and
+there's no way to apply to be one yet. So I made code-free versions of eight of them, built only from skills,
+Markdown and JSON. They do less (nothing draws on screen, and most of them only act when you ask), but they can go in
+the directory. Each one's README has a "What's different from the code version" section.
+
+```
+/plugin install assessment-marker-lite@akash-mods
+/plugin install application-assistant-lite@akash-mods
+/plugin install voice-profile-lite@akash-mods
+/plugin install auto-handoff-lite@akash-mods
+/plugin install pinned-notes-lite@akash-mods
+/plugin install session-archive-lite@akash-mods
+/plugin install course-correct-lite@akash-mods
+/plugin install tool-guards-lite@akash-mods
+```
+
+Install the code version or the lite one of each, not both: they share commands and do the same job.
+tool-guards-lite and course-correct-lite use prompt hooks, so each one makes a small model call (before every shell
+command, and at the end of every reply).
+
 ## context-bar
 
 A bar above (or below) the prompt that shows how full your context window is, split into the same categories `/context` uses
