@@ -56,9 +56,11 @@ uses it every time I ask for a draft.
 
   That's all it holds: the names of the sources you ticked, anything you typed under "Other" (cut to 200
   characters), and the profile's path. It never puts the profile's contents, your environment variables or anything
-  else it reads into a prompt, and it doesn't submit any other prompt. Claude then reads only those sources, using your own connectors and tools, with your usual permission
-  prompts. The emails, messages and files it samples are read by Claude in that conversation, the same as anything
-  else you share with it; only the summary and short excerpts are kept.
+  else it reads into a prompt, and it doesn't submit any other prompt. The one file it reads (`fs.read` in
+  `hooks/register.ts`) is your profile, and that only goes into the system prompt section described below, never into
+  this submitted prompt (`prompt.submit`, line 139). Claude then reads only those sources, using your own connectors
+  and tools, with your usual permission prompts. The emails, messages and files it samples are read by Claude in that
+  conversation, the same as anything else you share with it; only the summary and short excerpts are kept.
 - **What it reads.** The `USERPROFILE` (or `HOME`) environment variable, to find your home folder, and the profile file
   at `~/.claude/voice-profile/profile.md`. It checks the file's size and modified time whenever Claude Code builds its
   system prompt and re-reads it only when it changed.
