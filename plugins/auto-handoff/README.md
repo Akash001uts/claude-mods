@@ -57,13 +57,17 @@ the kickoff prompt will be waiting in the prompt box next time you open a sessio
 
   In `ask` mode it only fills the prompt box with the wrap-up prompt and you decide whether to send it. At the start of
   a session it can also put a saved kickoff prompt in the prompt box (it doesn't send it).
+
+  The one thing it reads from the session, the context usage, never goes into either of these prompts. It only goes in
+  the hidden line added to prompts you send yourself (see the `prompt.submit` bullet below).
 - **Which commands it runs and when.** Only `/compact`, once per handoff, with Claude's compaction instructions as the
-  argument. It runs after Claude has called `handoff_ready` with mode `continue` and that turn has finished normally
+  argument (or no argument if Claude didn't give any). It runs after Claude has called `handoff_ready` with mode `continue` and that turn has finished normally
   (not interrupted). It never runs any other command.
 - **Which tool it answers for and when.** Only its own tool, `handoff_ready` (`mcp__auto-handoff__handoff_ready`),
   which Claude calls at the end of a wrap-up. The mod's `tool.call` hook is that tool's only implementation, so it
   answers every call to it: it saves the kickoff prompt and compaction instructions (or, with mode `end`, saves the
-  kickoff prompt for next session) and replies to Claude. It doesn't stand in for any other tool, and its hook only
+  kickoff prompt for next session) and replies to Claude. It refuses the call instead in two cases: when a subagent
+  calls it (only the main conversation hands off) and when `kickoffPrompt` is empty. It doesn't stand in for any other tool, and its hook only
   matches that one tool name, so every other tool call goes through untouched. Your normal permission rules apply to
   it, so you may get a prompt the first time; add `mcp__auto-handoff__handoff_ready` to your allow rules if you don't
   want to be asked.
