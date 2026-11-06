@@ -55,13 +55,22 @@ To install:
 - **What it asks.** In the first session after install (not under `claude -p`), one question in Claude Code's own
   question box: where to keep reviews. It only asks on its own until you answer or close it (closing keeps the
   default folder).
-- **What it sends to Claude.** `/mark`, `/mark ready` and `/mark setup` each submit one short prompt asking Claude
-  to run the matching skill. The prompt is fixed text: that request and the skill's name, nothing else. Nothing the
-  mod reads (the subject file, your files, plugin storage) ever goes into a prompt it submits. Nothing is submitted
-  unless you run one of them.
-- **What it reads.** Nothing. To find your subject, it checks whether `.assessment-marker/subject.json` exists in the
-  folder Claude Code is open in, or up to 7 folders above it, whenever Claude Code builds its system prompt. It never
-  opens the file: the subject goes by its folder's name, and Claude reads the file itself while marking.
+- **What it puts in the prompts it submits.** It submits a prompt only when you run `/mark`, and the prompt is one of
+  these three, word for word:
+
+  ```
+  Mark my assessment. Use the assessment-marker:mark skill and work out whether this is a first mark or a re-mark.
+  Check my assessment is ready to submit. Use the assessment-marker:ready skill.
+  Set up a subject for assessment marking. Use the assessment-marker:setup skill.
+  ```
+
+  `/mark` sends the first, `/mark ready` the second and `/mark setup` the third. That's all a prompt holds: fixed text
+  with no part filled in. What the mod reads (whether a subject file exists, your folder names, your save choice, the
+  list of subjects in plugin storage) never goes into a prompt it submits, and it doesn't submit any other prompt.
+- **What it reads.** Only whether a file exists. To find your subject, it checks (a file stat, not a read) whether
+  `.assessment-marker/subject.json` exists in the folder Claude Code is open in, or up to 7 folders above it, whenever
+  Claude Code builds its system prompt. It never opens the file or any of your other files: the subject goes by its
+  folder's name, and Claude reads the file itself while marking.
 - **What it adds to the system prompt.** One section: the active subject and its folder (or the subjects you've set
   up, if you're outside one), where reviews are kept, and which skill to use for which request.
 - **What it stores.** In plugin storage: whether it's asked the first-run question, your save choice, and the names
@@ -85,8 +94,8 @@ The mod is one file, `hooks/register.ts`. It hooks these events and nothing else
   asks the one save question.
 - `prompt.compose`: adds its one section (described above) to the end of the system prompt. It doesn't change or
   remove anything else in the system prompt, your instructions, other plugins' sections or tool descriptions.
-- `command.run` (for `/mark` only): checks the argument and submits the fixed prompt for that stage. Any other
-  argument just shows the usage line.
+- `command.run` (for `/mark` only): checks the argument and submits the fixed prompt for that stage (quoted above,
+  under "What it puts in the prompts it submits"). Any other argument just shows the usage line and submits nothing.
 
 It never runs commands or processes, reads or writes your files, makes network requests, registers tools or answers tool
 calls.
