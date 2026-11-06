@@ -50,8 +50,12 @@ before they run and steps in on those three.
   that file, to look for attribution lines.
 - **What it changes.** Only `git commit` and `gh pr create|edit` commands, only to take attribution lines out (in fix
   mode), and the attribution text Claude Code gives Claude for commits and PRs (it becomes empty).
-- **What it refuses.** Shell commands that write files (with the reason), and commits or PRs whose attribution it
-  can't take out safely.
+- **What it refuses.** Shell commands that write files (with the reason), commits or PRs whose attribution it
+  can't take out safely, and a shell command it couldn't finish checking (Claude is told to try again).
+- **What it decides on a permission check.** Only for file reads, only with the big-reads guard on, and only in the
+  main session. A read that would take 25% or more of the context left gets `ask`, so you decide in Claude Code's own
+  prompt. It answers `deny` only when your own permission rules already deny that read. It never answers `allow`, and
+  every other read is left to your rules and permission mode.
 - **What it asks.** Before a file read that would take 25% or more of the context left, through Claude Code's own
   permission prompt. Plus the two first-run questions, once.
 - **What it stores.** Your settings, in Claude Code's plugin storage.
