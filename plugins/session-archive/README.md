@@ -30,7 +30,7 @@ the order book") and shows your usage stats in a pane, built from the archive so
 - **If the folder goes missing** (drive unplugged, OneDrive signed out) you get one line saying so, and sessions are
   queued and copied once it's back.
 - **Big transcripts.** A mod can only read or write files up to 4 MiB. A transcript bigger than that is copied with
-  your system's own copy command (`copy` on Windows, `cp` elsewhere), and its stats keep counting from each turn.
+  your system's own copy program (`xcopy` on Windows, `cp` elsewhere), and its stats keep counting from each turn.
 - If you choose to leave sessions where they are, the mod reminds you that Claude Code still deletes them after 30
   days unless you raise `cleanupPeriodDays` in `~/.claude/settings.json`. It never changes your settings.
 
@@ -61,24 +61,29 @@ table in the mod, dated in the pane, and need updating when Anthropic changes th
   folder), `CLAUDE_CONFIG_DIR`, `COMPUTERNAME`/`HOSTNAME` (to name this PC's index file) and `OS`.
 - **What files it writes.** Only inside the archive folder you chose: the copies (`.jsonl` and/or `.md`),
   `index-<pc>.json` (its list of sessions with titles and stats) and a `README.txt`. With sessions left in place, just
-  the index, in `~/.claude/session-archive`. None of these is a build, start-up, settings or instructions file, and
-  no tool runs or obeys them. The paths aren't fixed text because the folder is the one you pick at setup.
-- **What it sends and where.** It reads the conversation (the session's transcript) and sends parts of it out in one
-  way only: `$.model.complete`, a Haiku call made through Claude Code to Anthropic, the same place the conversation
-  already went.
+  the index, in `~/.claude/session-archive`. Before a big copy it writes an empty file where that copy goes, so the
+  folder exists and `xcopy` has a file to overwrite. It doesn't mean to edit any build, start-up, settings or
+  instructions file: none of these is one, and no tool runs or obeys them. The paths aren't fixed text because the
+  folder is the one you pick at setup, and the file names come from the project, date, title and session id.
+- **What it sends and where.** It reads the conversation (the session's transcript) and local files (the transcripts
+  under `~/.claude/projects` and its own index), and sends parts of them out in one way only: `$.model.complete`, a
+  Haiku call made through Claude Code to Anthropic, the same place the conversation already went.
   - Titles: the Haiku call sees the opening of the session (your messages and the start of Claude's replies, up to
     6,000 characters) and writes a title, summary and keywords.
   - A search by meaning sends your search words and the index's titles, summaries and keywords, never whole
     transcripts.
-  - Plain-text search sends nothing. The copy commands below only copy a file from one folder on your computer to
-    another; they send nothing anywhere.
-- **Which programs it starts and why.** Only for a transcript over 4 MiB, because a mod can't read or write a file
-  that big:
-  - Windows: `cmd /c mkdir <archive project folder>` then `cmd /c copy /y <transcript> <archive copy>`. It starts
-    `cmd` because `mkdir` and `copy` are built into it (there's no separate copy program). Both arguments are file
-    paths, never other commands.
-  - macOS and Linux: `mkdir -p <archive project folder>` then `cp <transcript> <archive copy>`, run directly, no shell.
-  - No network tools, no scripts, nothing else.
+  - Plain-text search sends nothing.
+  - `$.process.run` (below) is not a way out. It only copies a transcript from one folder on your computer to
+    another and sends nothing anywhere.
+- **Which programs it starts and why.** One copy program, only for a transcript over 4 MiB, because a mod can't read
+  or write a file that big. It's started by name with fixed flags, no shell:
+  - Windows: `xcopy /y /q <transcript> <archive copy>`. `/y` overwrites the empty file without asking, `/q` keeps
+    it quiet.
+  - macOS and Linux: `cp <transcript> <archive copy>`.
+  - The only parts that aren't fixed text are the two file paths: `<transcript>` is Claude Code's own transcript
+    file for the session (`~/.claude/projects/<project>/<session id>.jsonl`), and `<archive copy>` is
+    `<archive>/<project>/<date> <title> <id>.jsonl`. They're always file paths, never commands or flags.
+  - No shell, no network tools, no scripts, nothing else.
 - **What it asks.** The four first-run questions, once.
 - **What it stores.** Your settings, per-project opt-outs and the queue of sessions waiting to be copied, in Claude
   Code's plugin storage.
@@ -101,5 +106,7 @@ The mod is `hooks/register.tsx`, with the parsing in `hooks/archive.ts`. It hook
   (`sessionTitle`), once per title. It doesn't touch your prompt and takes no permission decision: it passes the
   event on with `next(e)` and returns that result unchanged, only adding `sessionTitle` when there's a new title. It
   never blocks a prompt or changes a decision another hook made.
-- `command.run` (`/sessions` only): answers the command.
+- `command.run` (`/sessions` only): answers the mod's own command with its text. It matches only `/sessions`, so
+  every other command never reaches it, and it doesn't change the command or run anything else. No permission
+  decision is made here.
 - `ui.render` (the stats pane only): draws the pane.

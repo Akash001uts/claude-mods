@@ -235,8 +235,8 @@ export function stats(entries: readonly Entry[], from: string, today: string) {
   const perProject: Record<string, number> = {}
   let sessions = 0
   let messages = 0
-  for (const e of entries) {
-    const days = Object.entries(e.days).filter(([d]) => d >= from)
+  for (const entry of entries) {
+    const days = Object.entries(entry.days).filter(([d]) => d >= from)
     if (days.length === 0) continue
     sessions++
     for (const [d, v] of days) {
@@ -246,11 +246,11 @@ export function stats(entries: readonly Entry[], from: string, today: string) {
       for (const [model, t] of Object.entries(v.tokens)) {
         slot.tokens[model] = add(slot.tokens[model] ?? EMPTY, t)
         perModel[model] = add(perModel[model] ?? EMPTY, t)
-        perProject[e.project] = (perProject[e.project] ?? 0) + (cost(model, t) ?? 0)
+        perProject[entry.project] = (perProject[entry.project] ?? 0) + (cost(model, t) ?? 0)
       }
       byDay.set(d, slot)
     }
-    e.hours.forEach((n, hr) => (hours[hr]! += n))
+    entry.hours.forEach((n, hr) => (hours[hr]! += n))
   }
   // A day with a message counts toward a streak, whichever session it belongs to.
   const active = [...byDay.entries()].filter(([, v]) => v.messages > 0).map(([d]) => d).sort()
