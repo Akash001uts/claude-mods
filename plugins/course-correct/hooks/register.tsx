@@ -190,11 +190,26 @@ export const register: Register = on => {
   })
 
   // Asks Claude Code to watch the project folder, so changes made outside Claude count for the done-check.
+  // Every field next(e) gave comes back as it was; only the project folder is added to watchPaths.
   on('classic.SessionStart', async ($, e, next) => {
+    let watch = false
+    try {
+      watch = (await get($)).done
+    } catch {
+      watch = false
+    }
+    if (!watch) return next(e)
     const result = await next(e)
-    const s = await get($)
-    if (!s.done) return result
-    return { ...result, watchPaths: [...(result.watchPaths ?? []), e.cwd] }
+    return {
+      block: result.block,
+      preventContinuation: result.preventContinuation,
+      stopReason: result.stopReason,
+      additionalContext: result.additionalContext,
+      initialUserMessage: result.initialUserMessage,
+      sessionTitle: result.sessionTitle,
+      reloadSkills: result.reloadSkills,
+      watchPaths: [...(result.watchPaths ?? []), e.cwd],
+    }
   })
 
   on('classic.FileChanged', async ($, e, next) => {

@@ -172,3 +172,21 @@ test('/coach bans and unbans phrases and toggles parts', async ($, on) => {
   expect((await run($, 'style off')).text).toBe('Style guard off.')
   expect((await run($, '')).text).toContain('loop detector, done-check on')
 })
+
+test('SessionStart keeps what is beneath and only adds the project folder to watchPaths', async ($, on) => {
+  engine(on, {})
+  on('classic.SessionStart', () => ({ initialUserMessage: 'hi', sessionTitle: 't', watchPaths: ['C:/other'] }))
+  await start($)
+  const r = await $.classic.SessionStart({ source: 'startup', cwd: 'C:/proj' })
+  expect(r.initialUserMessage).toBe('hi')
+  expect(r.sessionTitle).toBe('t')
+  expect(r.watchPaths).toEqual(['C:/other', 'C:/proj'])
+})
+
+test('SessionStart with the done-check off passes the event on unchanged', async ($, on) => {
+  engine(on, { done: false })
+  on('classic.SessionStart', () => ({ initialUserMessage: 'hi' }))
+  await start($)
+  const r = await $.classic.SessionStart({ source: 'startup', cwd: 'C:/proj' })
+  expect(r).toEqual({ initialUserMessage: 'hi' })
+})
