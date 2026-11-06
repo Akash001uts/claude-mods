@@ -126,10 +126,11 @@ async function isWindows($: EngineInterface) {
 }
 
 // A transcript over 4 MiB can't pass through $.fs, so one copy program copies it: xcopy on Windows, cp elsewhere,
-// run by name with fixed flags, no shell. $.fs.write first makes the folder and an empty file there, so xcopy sees
-// a file to overwrite and never asks whether the target is a file or a folder.
+// run by name with fixed flags, no shell. The first time, $.fs.write makes the folder and an empty file there, so
+// xcopy sees a file to overwrite and never asks whether the target is a file or a folder. A copy that's already
+// there is never emptied first, so a failed copy leaves the last good one.
 async function bigCopy($: EngineInterface, from: string, to: string) {
-  await $.fs.write(to, '')
+  if (!(await $.fs.exists(to))) await $.fs.write(to, '')
   const isWin = await isWindows($)
   const win = (path: string) => path.replace(/\//g, '\\')
   const r = isWin
