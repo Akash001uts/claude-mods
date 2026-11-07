@@ -110,6 +110,12 @@
       "version": "1.0.0"
     },
     {
+      "name": "needs-you-lite",
+      "source": "./lite/needs-you",
+      "description": "Get a Slack DM when Claude is stuck on a permission prompt or has finished and is waiting for you. Code-free version: /needs-you adds one Notification hook to your settings that calls your claude.ai Slack connector. Alerts only, no replies from Slack (Code-free version of needs-you: install one or the other, not both.)",
+      "version": "1.0.0"
+    },
+    {
       "name": "application-assistant-lite",
       "source": "./lite/application-assistant",
       "description": "Job and internship applications, code-free: /apply rundown with what's due, role scans, eligibility checks against your own profile, application packs, form filling in Chrome for you to submit, and a tracker kept up to date from your inbox (Code-free version of application-assistant: install one or the other, not both.)",

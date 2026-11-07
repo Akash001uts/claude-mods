@@ -1,0 +1,10 @@
+{
+  "name": "needs-you-lite",
+  "version": "1.0.0",
+  "description": "Code-free version. Get a Slack DM when Claude is stuck on a permission prompt or has finished and is waiting for you. /needs-you sets up one Notification hook in your settings that calls your claude.ai Slack connector, and can test, turn off or remove it",
+  "author": {
+    "name": "Akash Bhatnagar"
+  },
+  "license": "MIT",
+  "privacyPolicyUrl": "https://github.com/Akash001uts/claude-mods/blob/release-needs-you-lite/lite/needs-you/PRIVACY.md"
+}
