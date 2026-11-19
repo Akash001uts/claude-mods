@@ -6,22 +6,18 @@ argument-hint: "[setup | loop|done|style on|off | loop <n> | ban \"<phrase>\" | 
 
 # /coach
 
-course-correct is code-free. Two things do the work:
-
-1. **The plugin's Stop hook** (always on while the plugin is enabled). At the end of every reply a small model call
-   reads Claude's final message and sends Claude back if it (a) says changed code is done or working without
-   reporting any run, test or build and without saying it is untested, or (b) uses one of the built-in phrases below.
-   It can't read any file, so it knows nothing about the user's own settings.
-2. **A marked block in `~/.claude/CLAUDE.md`** that this skill writes only with the user's consent. It carries
-   everything the hook can't: the "same error twice" rule, the done rule as a habit, the user's own banned phrases,
-   the comment limit and the reply language.
+course-correct (lite) has no hooks: the plugin directory only takes hooks from Verified organisations. Everything
+works through **a marked block in `~/.claude/CLAUDE.md`** that this skill writes only with the user's consent. It
+carries all the rules: the "same error twice" rule, run before saying code works, the banned phrases (built-in and
+the user's own), the comment limit and the reply language. Claude follows them as instructions; nothing checks them
+automatically.
 
 Settings live in `~/.claude/course-correct/rules.md`. Changing a setting does nothing on its own until the CLAUDE.md
-block is rewritten, so after every change offer to update the block.
+block is rewritten, so after every change offer to update the block. If the block isn't there, nothing is on.
 
 The user typed: `$ARGUMENTS`
 
-## Built-in phrases (also in the hook)
+## Built-in phrases
 
 You're absolutely right / belt-and-suspenders / belt and suspenders / Great question / I hope this helps /
 Let me know if you'd like / rest assured / It's worth noting
@@ -60,18 +56,15 @@ Match the first word of `$ARGUMENTS`, ignoring case. Quotes around a phrase are 
   `<!-- course-correct:start -->`) and whether it matches the current settings. Then list the commands from the
   argument hint, one line each.
 - **`setup`**: ask with AskUserQuestion, multi-select, "Which parts of course-correct should be on?": Loop detector,
-  Done-check, Style guard. Save to rules.md. Then explain in two lines that the end-of-reply check is part of the
-  plugin and runs regardless, and that the rest only works through the CLAUDE.md block, and offer the block (see
+  Done-check, Style guard. Save to rules.md. Then say in one line that it all works through the CLAUDE.md block, and offer the block (see
   below).
 - **`loop on|off`, `done on|off`, `style on|off`**: set it in rules.md, confirm in one line, offer to update the
-  block. If they turn `done` or `style` off, say the end-of-reply check still runs while the plugin is enabled;
-  `/plugin disable course-correct-lite` turns it off (and this skill with it).
+  block.
 - **`loop <n>`**: set `loop-repeats` to n (at least 1), offer to update the block.
 - **`ban "<phrase>"`**: add it to `bans` (no duplicates, ignoring case) and remove it from `unbanned` if it's there.
   Confirm, offer to update the block.
-- **`unban "<phrase>"`**: remove it from `bans`; if it's a built-in phrase, add it to `unbanned`. If it was built-in,
-  say plainly that the end-of-reply check will still flag it, because that list is fixed in the plugin's hook; only
-  the CLAUDE.md block drops it. Offer to update the block.
+- **`unban "<phrase>"`**: remove it from `bans`; if it's a built-in phrase, add it to `unbanned`. Offer to update
+  the block.
 - **`bans`**: list the active phrases, marking which are built-in and which are the user's.
 - **`comments <n>|off`**: set it, confirm ("at most n comment lines per 10 lines of code"), offer to update the block.
 - **`language <name>|off`**: set it, confirm, offer to update the block.
@@ -79,7 +72,7 @@ Match the first word of `$ARGUMENTS`, ignoring case. Quotes around a phrase are 
 - **`remove`**: show the block that's there and ask to remove it; on yes, delete everything from
   `<!-- course-correct:start -->` to `<!-- course-correct:end -->` inclusive with Edit, nothing else.
 - **`quiet`, `loud`, `rewrite`, `headsup`**: say these were part of the code version and are gone: there are no
-  toasts, and the end-of-reply check always asks Claude to restate the slipped sentence in one line.
+  toasts and no automatic check, only the rules in the CLAUDE.md block.
 - Anything else: say it's unknown and show the command list.
 
 ## The CLAUDE.md block
@@ -92,7 +85,7 @@ and there are no settings, there's nothing to write: offer to remove the block i
 ## course-correct (managed by /coach, edit there)
 - Same error again: if a command gives the same error after you changed files to fix it (ignore line numbers, paths and quoted names when comparing), or you are about to make the exact same edit to a file again, stop editing. Explain what is actually going wrong, give two different approaches, then pick one.
 - Before saying code works or is done, run it (tests, a build, a type check or the program itself) and say what you ran. If you can't run it, say clearly that it is untested.
-- Never use these phrases, in replies or in code and comments you write: "<phrase>", "<phrase>", ...
+- Never use these phrases, in replies or in code and comments you write: "<phrase>", "<phrase>", ... If one slips into a reply, restate that sentence without it in one line.
 - Comments: at most <n> comment lines per 10 lines of code in any edit. Keep only what isn't obvious from the code.
 - Write replies in <language>.
 <!-- course-correct:end -->
