@@ -59,8 +59,8 @@ the directory. Each one's README has a "What's different from the code version" 
 ```
 
 Install the code version or the lite one of each, not both: they share commands and do the same job.
-tool-guards-lite and course-correct-lite use prompt hooks, so each one makes a small model call (before every shell
-command, and at the end of every reply). needs-you-lite's setup adds one hook to your own settings that calls
+None of them ship hooks (the directory only takes those from Verified organisations, prompt hooks included).
+needs-you-lite's setup adds one hook to your own settings that calls
 your claude.ai Slack connector, after showing you the change and asking.
 
 ## context-bar
